@@ -1,0 +1,43 @@
+name: resume_ai_pro
+description: ATS-Optimized AI Resume Builder
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP
+  http: ^1.2.0
+  
+  # UI
+  google_fonts: ^8.1.0
+  flutter_animate: ^4.3.0
+  
+  # File download & share
+  path_provider: ^2.1.2
+  open_file: ^4.0.0
+  share_plus: ^11.0.0
+  
+  # Storage (save user data locally)
+  shared_preferences: ^2.2.2
+  
+  # File picker (upload old CV - future)
+  file_picker: ^8.0.0
+  
+  # Icons
+  cupertino_icons: ^1.0.2
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
