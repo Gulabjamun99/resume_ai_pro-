@@ -10,7 +10,7 @@ class ApiService {
   // Local testing: 'http://10.0.2.2:8000'  (Android emulator)
   // Real phone:    'http://192.168.1.XX:8000' (apna WiFi IP)
   // Production:    'https://your-backend.onrender.com'
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = 'https://resume-ai-backend-85zs.onrender.com';
   // ⚠️ Owner ka UPI ID yahan change krein
   static const String paymentUpiId = 'rahul@upi';
 
