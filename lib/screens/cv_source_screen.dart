@@ -6,7 +6,6 @@ import 'form_screen.dart';
 
 /// Pehla screen jaha user decide karta hai:
 /// "Purana CV hai ya bilkul shuru se banana hai?"
-/// Bilkul wahi sawaal jo Claude khud puchta hai jab koi resume banwata hai.
 class CVSourceScreen extends StatelessWidget {
   final String jobDescription;
   const CVSourceScreen({super.key, this.jobDescription = ''});

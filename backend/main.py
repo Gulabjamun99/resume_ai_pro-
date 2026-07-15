@@ -291,10 +291,10 @@ def _ocr_pdf(content: bytes) -> str:
 async def parse_cv(req: ParseAndMergeRequest):
     """
     Raw text (purane CV se) + user ka naya bola hua experience/update —
-    dono ko Claude AI ko bhejke ek clean structured JSON banwata hai
+    dono ko engine ko bhejke ek clean structured JSON banwata hai
     jo seedha frontend form ko pre-fill kar sake.
     """
-    prompt = f"""You are an expert resume parser. The user uploaded their OLD resume/CV.
+    prompt = f"""You are an expert resume parser and translator. The user uploaded their OLD resume/CV.
 Extract ALL information from the raw text below into clean structured fields.
 
 RAW CV TEXT (extracted from PDF/DOCX/Image, may have formatting issues - fix them):
@@ -306,21 +306,26 @@ RAW CV TEXT (extracted from PDF/DOCX/Image, may have formatting issues - fix the
 {req.additional_info}
 
 INSTRUCTIONS:
-1. Extract name, phone, email, city, LinkedIn, GitHub if present
-2. Extract target role / current designation
-3. Calculate total years of experience from work history dates (estimate if needed)
-4. Extract ALL work experience entries with company, designation, dates, location, responsibilities
-5. Extract ALL education entries
-6. Extract ALL skills (technical, soft, languages, certifications) - split them into separate lists
-7. Extract any projects mentioned
-8. Extract any achievements/awards/extra info
-9. If user provided ADDITIONAL INFO above, merge it intelligently:
-   - If it's a new job, add it as the most recent work experience
-   - If it's new skills, add them to skills list
-   - If it's a new certification, add to certifications
-   - If it's general update, incorporate appropriately
-10. Clean up any OCR errors or formatting issues in the text
-11. If experience years cannot be determined, set to 0 and let user confirm
+1. Extract name, phone, email, city, LinkedIn, GitHub if present.
+2. Extract target role / current designation.
+3. Calculate total years of experience from work history dates (estimate if needed).
+4. Extract ALL work experience entries with company, designation, dates, location, responsibilities.
+5. Extract ALL education entries.
+6. Extract ALL skills (technical, soft, languages, certifications) - split them into separate lists.
+7. Extract any projects mentioned.
+8. Extract any achievements/awards/extra info.
+9. If user provided ADDITIONAL INFO above, it might be in English, Hinglish (Hindi written in English alphabets like 'maine project banaya hai'), or Hindi:
+   - Understand their intent completely.
+   - TRANSLATE any Hinglish or Hindi statements into professional English.
+   - Refine any informal tools or projects mentioned (e.g., if they say "antigravity", "claude", "ai se coding kiya", refine it to professional software engineering terms or project context, like "Collaborated with AI developer tools to build...").
+   - Merge this additional info intelligently:
+     - If it's a new job, add it as the most recent work experience.
+     - If it's new skills, add them to the technical/soft skills list.
+     - If it's a new project, add it to projects.
+     - If it's a new certification, add to certifications.
+     - If it's a general update, incorporate it appropriately.
+10. Clean up any OCR errors or formatting issues in the text.
+11. If experience years cannot be determined, set to 0 and let user confirm.
 
 CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
 {{

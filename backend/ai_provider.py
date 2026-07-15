@@ -65,16 +65,37 @@ def _get_openrouter_client():
 def generate_json(prompt: str, max_tokens: int = 3000) -> dict:
     """
     Sends the prompt to whichever provider is configured, and returns
-    the parsed JSON dict. Every resume-writing prompt in this app asks
-    the model to "return ONLY valid JSON" — this function is the one
-    place that enforces and cleans that contract, regardless of provider.
+    the parsed JSON dict. Enforces robust extraction of JSON blocks,
+    handles markdown code fences, and cleans trailing commas.
     """
     raw = _call_provider(prompt, max_tokens)
     raw = raw.strip()
-    raw = re.sub(r'^```json\s*', '', raw)
-    raw = re.sub(r'^```\s*', '', raw)
-    raw = re.sub(r'\s*```$', '', raw)
-    return json.loads(raw)
+    
+    # Robustly find the JSON boundaries
+    first_brace = raw.find('{')
+    last_brace = raw.rfind('}')
+    
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        json_str = raw[first_brace:last_brace + 1]
+    else:
+        json_str = raw
+
+    # Clean markdown fences
+    json_str = re.sub(r'^```json\s*', '', json_str)
+    json_str = re.sub(r'^```\s*', '', json_str)
+    json_str = re.sub(r'\s*```$', '', json_str)
+
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # Fallback 1: Remove trailing commas in arrays/objects (e.g. [1, 2,])
+        cleaned = re.sub(r',\s*([\]}])', r'\1', json_str)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            # Fallback 2: Print raw string to log and raise with helpful context
+            print(f"JSON Parse Failed. Raw response: {raw}")
+            raise e
 
 
 def _call_provider(prompt: str, max_tokens: int) -> str:

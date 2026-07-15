@@ -32,15 +32,15 @@ class LandingScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // Hero
-              const Text('Job-Winning Resume\nBuilt by AI', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.text, height: 1.2)),
+              const Text('Job-Winning Resume\nDesigned for Success', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.text, height: 1.2)),
               const SizedBox(height: 8),
-              const Text('Add your details — AI will understand, you verify, then it builds an ATS-optimized resume.', style: TextStyle(fontSize: 14, color: AppColors.text2, height: 1.5)),
+              const Text('Add your details — our engine will organize, you verify, then it builds an ATS-optimized resume.', style: TextStyle(fontSize: 14, color: AppColors.text2, height: 1.5)),
               const SizedBox(height: 20),
 
               // Badges
               Wrap(spacing: 8, runSpacing: 8, children: const [
                 AccentBadge('✅ ATS Score 90+', color: AppColors.green, bg: Color(0x1F3ECF8E)),
-                AccentBadge('🤖 Real AI', color: AppColors.accent),
+                AccentBadge('🎯 ATS Approved', color: AppColors.accent),
                 AccentBadge('🔄 3 Free Edits', color: AppColors.gold, bg: Color(0x1FF6C90E)),
                 AccentBadge('📄 PDF + DOCX', color: AppColors.blue, bg: Color(0x1F60A5FA)),
               ]),
@@ -55,7 +55,7 @@ class LandingScreen extends StatelessWidget {
                 mainAxisSpacing: 10,
                 childAspectRatio: 1.4,
                 children: const [
-                  _FeatureCard('🤖', 'Claude AI', 'Action verbs, keywords — AI handles it all'),
+                  _FeatureCard('✍️', 'ATS Optimizer', 'Action verbs, keywords — we handle it all'),
                   _FeatureCard('✅', 'Verify First', 'Confirm your data before we build'),
                   _FeatureCard('💬', 'Chat to Edit', 'Just say "change this" — instant updates'),
                   _FeatureCard('📥', 'PDF + DOCX', 'Real files — ready to apply'),

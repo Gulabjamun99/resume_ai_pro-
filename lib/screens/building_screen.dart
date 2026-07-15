@@ -98,16 +98,16 @@ class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStat
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              // Floating robot icon
+              // Floating document icon
               AnimatedBuilder(
                 animation: _floatAnim,
                 builder: (_, child) => Transform.translate(offset: Offset(0, _floatAnim.value), child: child),
-                child: const Text('🤖', style: TextStyle(fontSize: 52)),
+                child: const Text('📄', style: TextStyle(fontSize: 52)),
               ),
               const SizedBox(height: 20),
-              Text(_isJD ? 'Tailoring Your Resume to This Job...' : 'AI Is Building Your Resume...', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.text)),
+              Text(_isJD ? 'Tailoring Your Resume to This Job...' : 'Writing Your Resume...', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.text)),
               const SizedBox(height: 6),
-              Text(_isJD ? 'Claude AI is matching your experience to this job description' : 'Claude AI is reading your data and writing your resume', style: const TextStyle(fontSize: 13, color: AppColors.text2)),
+              Text(_isJD ? 'Matching your experience to this job description' : 'Reading your data and structuring your resume', style: const TextStyle(fontSize: 13, color: AppColors.text2)),
               const SizedBox(height: 24),
 
               // Progress bar
