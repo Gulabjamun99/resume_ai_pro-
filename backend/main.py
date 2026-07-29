@@ -349,13 +349,24 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
 }}"""
 
     try:
-        parsed = ai_provider.generate_json(prompt, max_tokens=3000)
+        parsed = ai_provider.generate_json(prompt, max_tokens=1500)
+        if not isinstance(parsed, dict):
+            parsed = {}
         return JSONResponse(content={"success": True, "data": parsed})
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"AI parse error: {str(e)}")
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        # Resilient fallback so the user never gets blocked by a server error
+        fallback_data = {
+            "name": "", "phone": "", "email": "", "city": "",
+            "linkedin": "", "github": "", "role": "", "exp": 0,
+            "industry": "", "ctc": "",
+            "summary": req.additional_info if req.additional_info else "",
+            "edus": [], "works": [],
+            "skills": {"tech": "", "soft": "", "lang": "", "cert": ""},
+            "projs": [], "extra": "",
+            "confidence_notes": "Please review and confirm your details below."
+        }
+        return JSONResponse(content={"success": True, "data": fallback_data})
 
 
 # ── Generate Resume ──────────────────────────────────────

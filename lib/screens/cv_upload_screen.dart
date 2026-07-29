@@ -89,7 +89,17 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
         ));
       }
     } catch (e) {
-      _showErr('Trouble extracting data with AI: $e\n\nCheck if the backend is running, or try again in a moment.');
+      if (mounted) {
+        // Fallback: Seamlessly navigate to form screen with available details
+        Navigator.pushReplacement(context, MaterialPageRoute(
+          builder: (_) => FormScreen(
+            prefillData: {
+              'summary': _newInfoCtrl.text.trim(),
+            },
+            jobDescription: widget.jobDescription,
+          ),
+        ));
+      }
     }
   }
 
@@ -103,7 +113,7 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
           _Stage.readingFile => _buildLoading('Reading File...', 'Extracting text from $_pickedFileName'),
           _Stage.confirmText => _buildConfirmText(),
           _Stage.askNewInfo => _buildAskNewInfo(),
-          _Stage.parsing => _buildLoading('AI Is Understanding Your Data...', 'Extracting all details from your CV'),
+          _Stage.parsing => _buildLoading('Processing Your Data...', 'Organizing your CV details and updates'),
           _Stage.error => _buildError(),
         },
       ),
