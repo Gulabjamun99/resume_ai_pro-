@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
 import 'form_screen.dart';
+import 'building_screen.dart';
 
 class CVUploadScreen extends StatefulWidget {
   final bool startInPasteMode;
@@ -79,28 +80,16 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
     setState(() => _stage = _Stage.askNewInfo);
   }
 
-  Future<void> _finalizeParse() async {
-    setState(() => _stage = _Stage.parsing);
-    try {
-      final parsedData = await ApiService.parseCV(_extractedText, _newInfoCtrl.text.trim());
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(
-          builder: (_) => FormScreen(prefillData: parsedData, jobDescription: widget.jobDescription),
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        // Fallback: Seamlessly navigate to form screen with available details
-        Navigator.pushReplacement(context, MaterialPageRoute(
-          builder: (_) => FormScreen(
-            prefillData: {
-              'summary': _newInfoCtrl.text.trim(),
-            },
-            jobDescription: widget.jobDescription,
-          ),
-        ));
-      }
-    }
+  void _finalizeParse() {
+    Navigator.pushReplacement(context, MaterialPageRoute(
+      builder: (_) => BuildingScreen(
+        plan: widget.jobDescription.isNotEmpty ? 'jd_tailored' : 'junior',
+        isAutoBuildFromCV: true,
+        extractedText: _extractedText,
+        additionalInfo: _newInfoCtrl.text.trim(),
+        jobDescription: widget.jobDescription,
+      ),
+    ));
   }
 
   @override

@@ -100,6 +100,13 @@ class ParseAndMergeRequest(BaseModel):
     extracted_text: str
     additional_info: str = ""  # new experience/skills the user mentioned
 
+class AutoBuildCVRequest(BaseModel):
+    extracted_text: str
+    additional_info: str = ""
+    job_description: str = ""
+    template_id: str = "classic"
+    template_color: str = "#1a1a2e"
+
 class DownloadRequest(BaseModel):
     resume_data: dict
     format: str  # "pdf" or "doc"
@@ -367,6 +374,87 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
             "confidence_notes": "Please review and confirm your details below."
         }
         return JSONResponse(content={"success": True, "data": fallback_data})
+
+
+# ── Auto-Build Complete Resume from CV + Updates (1-Step) ─
+@app.post("/auto-build-from-cv")
+async def auto_build_from_cv(req: AutoBuildCVRequest):
+    """
+    Directly reads old CV text + user's new updates (in English, Hinglish, or Hindi)
+    + optional JD, translates and merges everything into a complete ready-to-preview
+    ATS-optimized resume in one fast AI call!
+    """
+    prompt = f"""You are an expert resume writer and translator. Create a complete, ATS-optimized resume.
+
+RAW OLD CV TEXT (extracted from candidate's PDF/DOCX/Image):
+---
+{req.extracted_text}
+---
+
+{"ADDITIONAL NEW UPDATES / RECENT EXPERIENCE (User typed this in English, Hinglish, or Hindi — MERGE & TRANSLATE this into professional English):" if req.additional_info else ""}
+{req.additional_info}
+
+{"TARGET JOB DESCRIPTION (Tailor the resume to this specific job if provided):" if req.job_description else ""}
+{req.job_description}
+
+INSTRUCTIONS:
+1. Extract and standardize personal contact info (name, phone, email, city, linkedin, github, target role).
+2. Read the additional new updates (which may be written informally or in Hinglish like "maine AWS certificate liya hai", "XYZ corp me software engineer join kiya 2024 me"):
+   - Understand the intent completely.
+   - Translate all Hindi/Hinglish to high-impact corporate/engineering English.
+   - Intelligently merge new work experience as the most recent job, new skills into technical skills, new projects into projects, new certifications into certifications.
+3. Write a compelling 3-line professional summary.
+4. Enhance ALL work experience bullets with strong action verbs (Led, Architected, Delivered, Built, Reduced, Increased, Streamlined) and realistic metrics.
+5. Create comprehensive ATS-friendly technical and soft skills lists.
+6. Target a 1-page to max 2-page ATS structure.
+
+CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
+{{
+  "personal": {{
+    "name": "",
+    "phone": "",
+    "email": "",
+    "city": "",
+    "linkedin": "",
+    "github": "",
+    "role": ""
+  }},
+  "summary": "3-line professional summary",
+  "education": [{{"deg":"","col":"","yr":"","grade":"","honors":""}}],
+  "experience": [{{"co":"","des":"","start":"","end":"","loc":"","bullets":["bullet1","bullet2"]}}],
+  "skills": {{
+    "technical": ["skill1","skill2"],
+    "soft": ["skill1","skill2"],
+    "languages": ["lang1"],
+    "certifications": ["cert1"]
+  }},
+  "projects": [{{"name":"","tech":"","desc":""}}],
+  "extra": ["achievement1"],
+  "ats_keywords": ["kw1","kw2","kw3","kw4","kw5"],
+  "ats_score": 92,
+  "estimated_pages": 1
+}}"""
+
+    try:
+        parsed = ai_provider.generate_json(prompt, max_tokens=2200)
+        if not isinstance(parsed, dict) or "summary" not in parsed:
+            parsed = {
+                "personal": {"name": "Candidate Name", "phone": "", "email": "", "city": "", "linkedin": "", "github": "", "role": "Professional"},
+                "summary": req.additional_info if req.additional_info else "Experienced professional with background in software development and project execution.",
+                "education": [],
+                "experience": [],
+                "skills": {"technical": ["Communication", "Problem Solving"], "soft": [], "languages": ["English"], "certifications": []},
+                "projects": [],
+                "extra": [],
+                "ats_keywords": ["Professional", "Teamwork"],
+                "ats_score": 88,
+                "estimated_pages": 1
+            }
+        return JSONResponse(content={"success": True, "data": parsed})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ── Generate Resume ──────────────────────────────────────

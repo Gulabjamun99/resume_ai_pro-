@@ -140,6 +140,34 @@ class ApiService {
     throw Exception(err['detail'] ?? 'Parse failed');
   }
 
+  /// Direct 1-step auto build from old CV + Hinglish/English updates
+  static Future<ResumeData> autoBuildFromCV({
+    required String extractedText,
+    String additionalInfo = '',
+    String jobDescription = '',
+    String templateId = 'classic',
+    String templateColor = '#1a1a2e',
+  }) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/auto-build-from-cv'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'extracted_text': extractedText,
+        'additional_info': additionalInfo,
+        'job_description': jobDescription,
+        'template_id': templateId,
+        'template_color': templateColor,
+      }),
+    ).timeout(const Duration(seconds: 45));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return ResumeData.fromJson(data['data']);
+    }
+    final err = jsonDecode(resp.body);
+    throw Exception(err['detail'] ?? 'Auto build failed');
+  }
+
   static Future<bool> verifyPayment(String utr, int amount) async {
     try {
       final resp = await http.post(

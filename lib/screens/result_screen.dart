@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../models/resume_model.dart';
 import '../services/api_service.dart';
@@ -30,6 +31,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   final _scrollCtrl = ScrollController();
   bool _isSending = false;
   bool _isDownloading = false;
+  bool _isPaid = false;
+
+  int get _amount => widget.isJDTailored ? 10 : (widget.plan == 'senior' ? 50 : 20);
 
   final _suggestions = [
     'Make summary more specific',
@@ -90,7 +94,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         _messages.removeLast();
         _messages.add(_ChatMsg(
           isAI: true,
-          text: '✅ Resume updated successfully!\n\n${_editsLeft > 0 ? "$_editsLeft edit${_editsLeft != 1 ? 's' : ''} edits remaining." : "All free edits used up."}\n\nAnything else you would like to change?',
+          text: '✅ Resume updated successfully!\n\n${_editsLeft > 0 ? "$_editsLeft edit${_editsLeft != 1 ? 's' : ''} remaining." : "All free edits used up."}\n\nAnything else you would like to change?',
         ));
         _resume = updated;
         _isSending = false;
@@ -122,6 +126,24 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   }
 
   Future<void> _download(String format) async {
+    if (!_isPaid) {
+      final paid = await _showPaymentModal();
+      if (!paid) return;
+      setState(() => _isPaid = true);
+    }
+    await _executeDownload(format);
+  }
+
+  Future<void> _share(String format) async {
+    if (!_isPaid) {
+      final paid = await _showPaymentModal();
+      if (!paid) return;
+      setState(() => _isPaid = true);
+    }
+    await _executeShare(format);
+  }
+
+  Future<void> _executeDownload(String format) async {
     if (_isDownloading) return;
     setState(() => _isDownloading = true);
     _showSnack('${format.toUpperCase()} file is being generated...');
@@ -136,13 +158,127 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
   }
 
-  Future<void> _share(String format) async {
+  Future<void> _executeShare(String format) async {
     try {
       final file = await ApiService.downloadFile(_resume, format, templateId: widget.templateId, templateColor: widget.templateColor);
       await Share.shareXFiles([XFile(file.path)], text: 'My ATS-Optimized Resume');
     } catch (e) {
       _showSnack('❌ Share failed', isError: true);
     }
+  }
+
+  Future<bool> _showPaymentModal() async {
+    final utrCtrl = TextEditingController();
+    bool isVerifying = false;
+
+    return await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bg2,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20, right: 20, top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('🔓 Unlock Full Download', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.text)),
+                      IconButton(onPressed: () => Navigator.pop(ctx, false), icon: const Icon(Icons.close, color: AppColors.text3)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your resume is 100% complete and ATS-optimized! Pay ₹$_amount once via UPI to unlock high-resolution PDF & DOCX download.',
+                    style: const TextStyle(fontSize: 13, color: AppColors.text2, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final upiUrl = 'upi://pay?pa=${ApiService.paymentUpiId}&pn=ResumeAI_Pro&am=$_amount&cu=INR&tn=Resume_Download';
+                        try {
+                          final uri = Uri.parse(upiUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          } else {
+                            _showSnack('UPI ID: ${ApiService.paymentUpiId}', isSuccess: true);
+                          }
+                        } catch (_) {}
+                      },
+                      icon: const Icon(Icons.account_balance_wallet_outlined),
+                      label: Text('Pay ₹$_amount via UPI (GPay / PhonePe / Paytm)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('Enter 12-Digit UTR / Transaction ID:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.text3)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: utrCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 12,
+                    style: const TextStyle(color: AppColors.text, letterSpacing: 2, fontWeight: FontWeight.bold),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 412356789012',
+                      counterText: '',
+                      hintStyle: TextStyle(color: AppColors.text3, letterSpacing: 0),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isVerifying ? null : () async {
+                        final utr = utrCtrl.text.trim();
+                        if (utr.length != 12 || int.tryParse(utr) == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter valid 12-digit UTR'), backgroundColor: AppColors.red));
+                          return;
+                        }
+                        setModalState(() => isVerifying = true);
+                        try {
+                          final ok = await ApiService.verifyPayment(utr, _amount);
+                          setModalState(() => isVerifying = false);
+                          if (ok) {
+                            Navigator.pop(ctx, true);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification failed. Double check UTR number.'), backgroundColor: AppColors.red));
+                          }
+                        } catch (e) {
+                          setModalState(() => isVerifying = false);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.red));
+                        }
+                      },
+                      child: isVerifying
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                        : const Text('✅ Verify Payment & Download'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ) ?? false;
   }
 
   void _showSnack(String msg, {bool isSuccess=false, bool isError=false}) {

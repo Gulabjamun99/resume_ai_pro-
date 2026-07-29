@@ -6,13 +6,27 @@ import '../services/api_service.dart';
 import 'result_screen.dart';
 
 class BuildingScreen extends StatefulWidget {
-  final ResumeRequest request;
+  final ResumeRequest? request;
   final String plan;
   final String templateId;
   final String templateColor;
   final String jobDescription;
   final int editsMax;
-  const BuildingScreen({super.key, required this.request, required this.plan, this.templateId = 'classic', this.templateColor = '#1a1a2e', this.jobDescription = '', this.editsMax = 3});
+  final bool isAutoBuildFromCV;
+  final String extractedText;
+  final String additionalInfo;
+  const BuildingScreen({
+    super.key,
+    this.request,
+    required this.plan,
+    this.templateId = 'classic',
+    this.templateColor = '#1a1a2e',
+    this.jobDescription = '',
+    this.editsMax = 3,
+    this.isAutoBuildFromCV = false,
+    this.extractedText = '',
+    this.additionalInfo = '',
+  });
   @override
   State<BuildingScreen> createState() => _BuildingScreenState();
 }
@@ -20,7 +34,13 @@ class BuildingScreen extends StatefulWidget {
 class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStateMixin {
   bool get _isJD => widget.jobDescription.isNotEmpty;
 
-  late final List<String> _steps = _isJD ? [
+  late final List<String> _steps = widget.isAutoBuildFromCV ? [
+    'Reading old CV & analyzing user updates...',
+    'Translating Hinglish/English updates into professional phrasing...',
+    'Merging work experience, skills & education...',
+    'Generating ATS-optimized professional summary...',
+    'Building responsive layout & ATS keyword score...',
+  ] : (_isJD ? [
     'Reading the job description carefully...',
     'Identifying key skills and keywords this JD wants...',
     'Setting up personal info and contact section...',
@@ -38,7 +58,7 @@ class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStat
     'Arranging skills in ATS-friendly format...',
     'Polishing projects and achievements...',
     'Final layout and ATS score check...',
-  ];
+  ]);
   int _currentStep = 0;
   double _progress = 0;
   String _error = '';
@@ -61,7 +81,7 @@ class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStat
 
   Future<void> _startBuild() async {
     // Animate steps while API call happens
-    final stepInterval = Duration(milliseconds: 600);
+    final stepInterval = Duration(milliseconds: 500);
     for (int i = 0; i < _steps.length - 1; i++) {
       await Future.delayed(stepInterval);
       if (mounted) setState(() {
@@ -71,12 +91,24 @@ class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStat
     }
 
     try {
-      final resumeData = _isJD
-          ? await ApiService.generateJDTailoredResume(widget.request, widget.jobDescription, templateId: widget.templateId, templateColor: widget.templateColor)
-          : await ApiService.generateResume(widget.request, templateId: widget.templateId, templateColor: widget.templateColor);
+      final ResumeData resumeData;
+      if (widget.isAutoBuildFromCV) {
+        resumeData = await ApiService.autoBuildFromCV(
+          extractedText: widget.extractedText,
+          additionalInfo: widget.additionalInfo,
+          jobDescription: widget.jobDescription,
+          templateId: widget.templateId,
+          templateColor: widget.templateColor,
+        );
+      } else if (_isJD) {
+        resumeData = await ApiService.generateJDTailoredResume(widget.request!, widget.jobDescription, templateId: widget.templateId, templateColor: widget.templateColor);
+      } else {
+        resumeData = await ApiService.generateResume(widget.request!, templateId: widget.templateId, templateColor: widget.templateColor);
+      }
+
       if (mounted) {
         setState(() { _progress = 1.0; _currentStep = _steps.length; });
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 400));
         Navigator.pushReplacement(context, MaterialPageRoute(
           builder: (_) => ResultScreen(
             resumeData: resumeData, plan: widget.plan,
