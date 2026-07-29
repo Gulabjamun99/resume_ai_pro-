@@ -24,9 +24,12 @@ class ResumePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = data.personal;
-    final contacts = [p['phone'], p['email'], p['city']].where((v) => v != null && v.toString().isNotEmpty).map((v) => v.toString()).toList();
-    if ((p['linkedin'] ?? '').isNotEmpty) contacts.add(p['linkedin']!);
-    if ((p['github'] ?? '').isNotEmpty) contacts.add(p['github']!);
+    final contacts = <Map<String, String>>[];
+    if ((p['phone'] ?? '').toString().isNotEmpty) contacts.add({'icon': '📞', 'val': p['phone'].toString()});
+    if ((p['email'] ?? '').toString().isNotEmpty) contacts.add({'icon': '✉️', 'val': p['email'].toString()});
+    if ((p['city'] ?? '').toString().isNotEmpty) contacts.add({'icon': '📍', 'val': p['city'].toString()});
+    if ((p['linkedin'] ?? '').toString().isNotEmpty) contacts.add({'icon': '💼', 'val': p['linkedin'].toString()});
+    if ((p['github'] ?? '').toString().isNotEmpty) contacts.add({'icon': '🐙', 'val': p['github'].toString()});
 
     final sk = data.skills;
     final tech = ((sk['technical'] as List?) ?? []).map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
@@ -45,31 +48,56 @@ class ResumePreview extends StatelessWidget {
       projs: projs, extra: extra, accent: _accent,
     );
 
+    Widget layout;
     switch (templateId) {
       case 'modern':
       case 'colorheader':
-        return _HeaderBandLayout(ctx: ctx);
+        layout = _HeaderBandLayout(ctx: ctx);
+        break;
       case 'executive':
-        return _ExecutiveLayout(ctx: ctx);
+        layout = _ExecutiveLayout(ctx: ctx);
+        break;
       case 'minimal':
-        return _MinimalLayout(ctx: ctx);
+        layout = _MinimalLayout(ctx: ctx);
+        break;
       case 'bold':
-        return _BoldLayout(ctx: ctx);
+        layout = _BoldLayout(ctx: ctx);
+        break;
       case 'timeline':
-        return _TimelineLayout(ctx: ctx);
+        layout = _TimelineLayout(ctx: ctx);
+        break;
       case 'compact':
-        return _CompactLayout(ctx: ctx);
+        layout = _CompactLayout(ctx: ctx);
+        break;
       case 'classic':
       default:
-        return _ClassicLayout(ctx: ctx);
+        layout = _ClassicLayout(ctx: ctx);
+        break;
     }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: layout,
+    );
   }
 }
 
 /// Shared data bundle passed to every layout so each one only handles presentation.
 class _ResumeContext {
   final String name, role, summary;
-  final List<String> contacts, tech, soft, langs, certs, extra;
+  final List<Map<String, String>> contacts;
+  final List<String> tech, soft, langs, certs, extra;
   final List<dynamic> exp, edus, projs;
   final Color accent;
   _ResumeContext({
@@ -81,72 +109,118 @@ class _ResumeContext {
 }
 
 // ── Shared building blocks ─────────────────────────────────
-Widget _heading(String text, Color accent, {bool underline = true, double size = 11}) => Padding(
-  padding: const EdgeInsets.only(top: 10, bottom: 3),
+Widget _heading(String text, Color accent, {bool line = true, double size = 12}) => Padding(
+  padding: const EdgeInsets.only(top: 14, bottom: 6),
   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text(text.toUpperCase(), style: TextStyle(fontSize: size, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: accent)),
-    if (underline) Container(margin: const EdgeInsets.only(top: 3), height: 0.6, color: const Color(0xFFCCCCCC)),
+    Row(children: [
+      Container(width: 4, height: size + 3, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
+      const SizedBox(width: 8),
+      Text(
+        text.toUpperCase(),
+        style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: accent),
+      ),
+    ]),
+    if (line) Container(margin: const EdgeInsets.only(top: 4), height: 1, color: accent.withValues(alpha: 0.2)),
   ]),
 );
 
 Widget _bulletList(List<dynamic> bullets) => Column(
   crossAxisAlignment: CrossAxisAlignment.start,
   children: bullets.where((b) => b.toString().isNotEmpty).map((b) => Padding(
-    padding: const EdgeInsets.only(left: 12, bottom: 2),
-    child: Text('• ${b.toString()}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF222222), height: 1.45)),
+    padding: const EdgeInsets.only(left: 6, bottom: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('• ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF444444))),
+        Expanded(
+          child: Text(
+            b.toString(),
+            style: const TextStyle(fontSize: 10.5, color: Color(0xFF222222), height: 1.45),
+          ),
+        ),
+      ],
+    ),
   )).toList(),
 );
 
 Widget _skillChips(List<String> skills, Color accent, {bool solid = false}) => Wrap(
-  spacing: 5, runSpacing: 5,
+  spacing: 6, runSpacing: 6,
   children: skills.map((s) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: solid ? accent.withOpacity(0.9) : accent.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(3),
+      color: solid ? accent : accent.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: accent.withValues(alpha: solid ? 1.0 : 0.3)),
     ),
-    child: Text(s, style: TextStyle(fontSize: 10, color: solid ? Colors.white : accent)),
+    child: Text(
+      s,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: solid ? Colors.white : accent,
+      ),
+    ),
   )).toList(),
 );
 
 Widget _jobBlock(dynamic w, Color accent) {
   final bullets = ((w['bullets'] as List?) ?? []);
   return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(bottom: 10),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text(w['des'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A0A0A)))),
-        Text('${w['start'] ?? ''} – ${w['end'] ?? 'Present'}', style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+        Expanded(child: Text(w['des'] ?? '', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF111111)))),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(4)),
+          child: Text('${w['start'] ?? ''} – ${w['end'] ?? 'Present'}', style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
+        ),
       ]),
-      Text('${w['co'] ?? ''}${(w['loc'] ?? '').isNotEmpty ? ' | ${w['loc']}' : ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF444444), fontStyle: FontStyle.italic)),
+      const SizedBox(height: 2),
+      Text('${w['co'] ?? ''}${(w['loc'] ?? '').isNotEmpty ? '  |  ${w['loc']}' : ''}', style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 4),
       _bulletList(bullets),
     ]),
   );
 }
 
-Widget _eduBlock(dynamic e) {
-  final colParts = [e['col'], e['grade'], e['honors']].where((v) => (v ?? '').isNotEmpty).join(' | ');
+Widget _eduBlock(dynamic e, Color accent) {
+  final colParts = [e['col'], e['grade'], e['honors']].where((v) => (v ?? '').isNotEmpty).join('  |  ');
   return Padding(
-    padding: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.only(bottom: 8),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text(e['deg'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0A0A0A)))),
-        Text(e['yr'] ?? '', style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+        Expanded(child: Text(e['deg'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF111111)))),
+        if ((e['yr'] ?? '').isNotEmpty)
+          Text(e['yr']!, style: const TextStyle(fontSize: 10, color: Color(0xFF666666), fontWeight: FontWeight.w500)),
       ]),
-      Text(colParts, style: const TextStyle(fontSize: 11, color: Color(0xFF444444), fontStyle: FontStyle.italic)),
+      if (colParts.isNotEmpty)
+        Text(colParts, style: TextStyle(fontSize: 10.5, color: accent, fontWeight: FontWeight.w500)),
     ]),
   );
 }
 
-Widget _projBlock(dynamic pr) => Padding(
-  padding: const EdgeInsets.only(bottom: 6),
+Widget _projBlock(dynamic pr, Color accent) => Padding(
+  padding: const EdgeInsets.only(bottom: 8),
   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    RichText(text: TextSpan(
-      text: pr['name'] ?? '',
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A0A0A)),
-      children: (pr['tech'] ?? '').isNotEmpty ? [TextSpan(text: ' | ${pr['tech']}', style: const TextStyle(fontWeight: FontWeight.normal, color: Color(0xFF555555), fontStyle: FontStyle.italic, fontSize: 10))] : [],
-    )),
-    if ((pr['desc'] ?? '').isNotEmpty) Text(pr['desc'], style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333), height: 1.4)),
+    Row(children: [
+      Expanded(
+        child: Text(
+          pr['name'] ?? '',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF111111)),
+        ),
+      ),
+      if ((pr['tech'] ?? '').isNotEmpty)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(color: accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+          child: Text(pr['tech']!, style: TextStyle(fontSize: 9.5, color: accent, fontWeight: FontWeight.w600)),
+        ),
+    ]),
+    if ((pr['desc'] ?? '').isNotEmpty) ...[
+      const SizedBox(height: 2),
+      Text(pr['desc'], style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333), height: 1.45)),
+    ],
   ]),
 );
 
@@ -155,7 +229,7 @@ Widget _sectionsBody(_ResumeContext ctx, {bool skillsSolid = false}) {
   return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     if (ctx.summary.isNotEmpty) ...[
       _heading('Professional Summary', c),
-      Text(ctx.summary, style: const TextStyle(fontSize: 11, color: Color(0xFF333333), height: 1.6)),
+      Text(ctx.summary, style: const TextStyle(fontSize: 11, color: Color(0xFF2D3748), height: 1.6)),
     ],
     if (ctx.exp.isNotEmpty) ...[
       _heading('Work Experience', c),
@@ -163,7 +237,7 @@ Widget _sectionsBody(_ResumeContext ctx, {bool skillsSolid = false}) {
     ],
     if (ctx.edus.isNotEmpty) ...[
       _heading('Education', c),
-      ...ctx.edus.map((e) => _eduBlock(e)),
+      ...ctx.edus.map((e) => _eduBlock(e, c)),
     ],
     if (ctx.tech.isNotEmpty) ...[
       _heading('Technical Skills', c),
@@ -175,44 +249,62 @@ Widget _sectionsBody(_ResumeContext ctx, {bool skillsSolid = false}) {
     ],
     if (ctx.projs.isNotEmpty) ...[
       _heading('Key Projects', c),
-      ...ctx.projs.map((pr) => _projBlock(pr)),
+      ...ctx.projs.map((pr) => _projBlock(pr, c)),
     ],
     if (ctx.certs.isNotEmpty) ...[
       _heading('Certifications', c),
-      ...ctx.certs.map((x) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $x', style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333))))),
+      ...ctx.certs.map((x) => Padding(padding: const EdgeInsets.only(bottom: 3), child: Row(children: [
+        Icon(Icons.verified, size: 12, color: c),
+        const SizedBox(width: 6),
+        Expanded(child: Text(x, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF222222)))),
+      ]))),
     ],
     if (ctx.langs.isNotEmpty) ...[
       _heading('Languages', c),
       _skillChips(ctx.langs, c, solid: skillsSolid),
     ],
     if (ctx.extra.isNotEmpty) ...[
-      _heading('Achievements & Activities', c),
-      ...ctx.extra.map((x) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $x', style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333))))),
+      _heading('Achievements & Key Honors', c),
+      ...ctx.extra.map((x) => Padding(padding: const EdgeInsets.only(bottom: 3), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(Icons.star, size: 12, color: c),
+        const SizedBox(width: 6),
+        Expanded(child: Text(x, style: const TextStyle(fontSize: 10.5, color: Color(0xFF222222)))),
+      ]))),
     ],
-    const SizedBox(height: 16),
-    Center(child: Text('Generated by ResumeAI Pro • ATS Optimized', style: TextStyle(fontSize: 9, color: Colors.grey[400]))),
+    const SizedBox(height: 20),
+    Center(
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Icon(Icons.check_circle_outline, size: 11, color: Color(0xFFA0AEC0)),
+        const SizedBox(width: 4),
+        Text('ATS Approved & Verified • Built with ResumeAI Pro', style: TextStyle(fontSize: 9.5, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+      ]),
+    ),
   ]);
 }
 
-// ── 1. Classic ──────────────────────────────────────────────
+// ── 1. Classic Premium ─────────────────────────────────────
 class _ClassicLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _ClassicLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Center(child: Text(ctx.name, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ctx.accent, fontFamily: 'Georgia', letterSpacing: 0.5))),
-      if (ctx.role.isNotEmpty) Center(child: Text(ctx.role, style: TextStyle(fontSize: 12, color: ctx.accent, fontFamily: 'Georgia'))),
-      const SizedBox(height: 4),
-      Center(child: Text(ctx.contacts.join(' | '), style: const TextStyle(fontSize: 10, color: Color(0xFF555555)), textAlign: TextAlign.center)),
+    return Container(color: Colors.white, padding: const EdgeInsets.all(22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Center(child: Text(ctx.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ctx.accent, letterSpacing: 0.5))),
+      if (ctx.role.isNotEmpty) Center(child: Text(ctx.role.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: ctx.accent.withValues(alpha: 0.8), letterSpacing: 1.5))),
       const SizedBox(height: 8),
-      Container(height: 1.5, color: ctx.accent),
+      Wrap(alignment: WrapAlignment.center, spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        Text(c['val']!, style: const TextStyle(fontSize: 10.5, color: Color(0xFF4A5568), fontWeight: FontWeight.w500)),
+      ])).toList()),
+      const SizedBox(height: 12),
+      Container(height: 2, decoration: BoxDecoration(gradient: LinearGradient(colors: [ctx.accent, ctx.accent.withValues(alpha: 0.2)]))),
       _sectionsBody(ctx),
     ]));
   }
 }
 
-// ── 2. Header Band (Modern / Colorheader) ──────────────────
+// ── 2. Modern Header Band ─────────────────────────────────
 class _HeaderBandLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _HeaderBandLayout({required this.ctx});
@@ -220,137 +312,135 @@ class _HeaderBandLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(color: Colors.white, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
-        width: double.infinity, color: ctx.accent, padding: const EdgeInsets.all(18),
+        width: double.infinity, color: ctx.accent, padding: const EdgeInsets.all(22),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(ctx.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-          if (ctx.role.isNotEmpty) Text(ctx.role, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9))),
-          const SizedBox(height: 4),
-          Text(ctx.contacts.join('  •  '), style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.75))),
+          Text(ctx.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+          if (ctx.role.isNotEmpty) Text(ctx.role.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9), letterSpacing: 1.5)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+            const SizedBox(width: 4),
+            Text(c['val']!, style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w500)),
+          ])).toList()),
         ]),
       ),
-      Padding(padding: const EdgeInsets.all(18), child: _sectionsBody(ctx, skillsSolid: true)),
+      Padding(padding: const EdgeInsets.all(20), child: _sectionsBody(ctx, skillsSolid: false)),
     ]));
   }
 }
 
-// ── 3. Executive ─────────────────────────────────────────────
+// ── 3. Executive Gold ──────────────────────────────────────
 class _ExecutiveLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _ExecutiveLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Center(child: Text(ctx.name.toUpperCase(), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: 2, fontFamily: 'Times New Roman'))),
-      Center(child: Container(margin: const EdgeInsets.symmetric(vertical: 4), height: 1.5, width: 120, color: ctx.accent)),
-      if (ctx.role.isNotEmpty) Center(child: Text(ctx.role, style: TextStyle(fontSize: 12, color: ctx.accent, fontStyle: FontStyle.italic, letterSpacing: 1))),
+    return Container(color: Colors.white, padding: const EdgeInsets.all(22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Center(child: Text(ctx.name.toUpperCase(), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 2.5, color: Color(0xFF111827)))),
       const SizedBox(height: 4),
-      Center(child: Text(ctx.contacts.join('  |  '), style: const TextStyle(fontSize: 10, color: Color(0xFF555555)))),
+      Center(child: Container(height: 2, width: 100, color: ctx.accent)),
+      const SizedBox(height: 4),
+      if (ctx.role.isNotEmpty) Center(child: Text(ctx.role.toUpperCase(), style: TextStyle(fontSize: 11, color: ctx.accent, fontWeight: FontWeight.w700, letterSpacing: 1.5))),
+      const SizedBox(height: 8),
+      Wrap(alignment: WrapAlignment.center, spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        Text(c['val']!, style: const TextStyle(fontSize: 10.5, color: Color(0xFF4B5563), fontWeight: FontWeight.w500)),
+      ])).toList()),
       _sectionsBody(ctx),
     ]));
   }
 }
 
-// ── 4. Minimalist ───────────────────────────────────────────
+// ── 4. Minimal Clean ────────────────────────────────────────
 class _MinimalLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _MinimalLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
     return Container(color: Colors.white, padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(ctx.name, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w300, letterSpacing: 4, color: ctx.accent)),
-      if (ctx.role.isNotEmpty) Text(ctx.role.toUpperCase(), style: TextStyle(fontSize: 10, color: ctx.accent.withOpacity(0.7), letterSpacing: 2)),
-      const SizedBox(height: 6),
-      Text(ctx.contacts.join('   '), style: const TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
+      Text(ctx.name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300, letterSpacing: 3, color: ctx.accent)),
+      if (ctx.role.isNotEmpty) Text(ctx.role.toUpperCase(), style: TextStyle(fontSize: 10.5, color: ctx.accent.withValues(alpha: 0.8), fontWeight: FontWeight.w700, letterSpacing: 2)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        Text(c['val']!, style: const TextStyle(fontSize: 10.5, color: Color(0xFF718096))),
+      ])).toList()),
+      const SizedBox(height: 8),
+      Container(height: 1, color: const Color(0xFFE2E8F0)),
       _sectionsBody(ctx),
     ]));
   }
 }
 
-// ── 5. Bold Accent Lines ───────────────────────────────────
+// ── 5. Bold Accent Bar ────────────────────────────────────
 class _BoldLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _BoldLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(ctx.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: ctx.accent)),
-      if (ctx.role.isNotEmpty) Text(ctx.role, style: const TextStyle(fontSize: 12, color: Color(0xFF555555))),
-      Text(ctx.contacts.join('  •  '), style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
-      Container(margin: const EdgeInsets.symmetric(vertical: 8), height: 3, color: ctx.accent),
-      Container(
-        padding: const EdgeInsets.only(left: 10),
-        decoration: BoxDecoration(border: Border(left: BorderSide(color: ctx.accent, width: 3))),
-        child: _sectionsBody(ctx),
-      ),
+    return Container(color: Colors.white, padding: const EdgeInsets.all(22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(width: 6, height: 46, decoration: BoxDecoration(color: ctx.accent, borderRadius: BorderRadius.circular(3))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(ctx.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ctx.accent)),
+          if (ctx.role.isNotEmpty) Text(ctx.role, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4A5568))),
+        ])),
+      ]),
+      const SizedBox(height: 10),
+      Wrap(spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        Text(c['val']!, style: const TextStyle(fontSize: 10.5, color: Color(0xFF4A5568))),
+      ])).toList()),
+      const SizedBox(height: 8),
+      Container(height: 2, color: ctx.accent.withValues(alpha: 0.3)),
+      _sectionsBody(ctx),
     ]));
   }
 }
 
-// ── 6. Timeline with Dots ──────────────────────────────────
+// ── 6. Timeline Layout ────────────────────────────────────
 class _TimelineLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _TimelineLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(ctx.name, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ctx.accent)),
-      if (ctx.role.isNotEmpty) Text(ctx.role, style: const TextStyle(fontSize: 12, color: Color(0xFF666666))),
-      Text(ctx.contacts.join('  •  '), style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
-      Container(margin: const EdgeInsets.symmetric(vertical: 8), height: 2, color: ctx.accent),
-      if (ctx.summary.isNotEmpty) ...[
-        _heading('Professional Summary', ctx.accent),
-        Text(ctx.summary, style: const TextStyle(fontSize: 11, color: Color(0xFF333333), height: 1.6)),
-      ],
-      if (ctx.exp.isNotEmpty) ...[
-        _heading('Work Experience', ctx.accent, underline: false),
-        ...ctx.exp.asMap().entries.map((entry) {
-          final i = entry.key; final w = entry.value;
-          final bullets = ((w['bullets'] as List?) ?? []);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(width: 9, height: 9, margin: const EdgeInsets.only(top: 4, right: 10),
-                decoration: BoxDecoration(color: i == 0 ? ctx.accent : ctx.accent.withOpacity(0.4), shape: BoxShape.circle)),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: Text(w['des'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-                  Text('${w['start'] ?? ''} – ${w['end'] ?? 'Present'}', style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
-                ]),
-                Text('${w['co'] ?? ''}${(w['loc'] ?? '').isNotEmpty ? ' | ${w['loc']}' : ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF444444), fontStyle: FontStyle.italic)),
-                _bulletList(bullets),
-              ])),
-            ]),
-          );
-        }),
-      ],
-      if (ctx.edus.isNotEmpty) ...[_heading('Education', ctx.accent), ...ctx.edus.map((e) => _eduBlock(e))],
-      if (ctx.tech.isNotEmpty) ...[_heading('Technical Skills', ctx.accent), _skillChips(ctx.tech, ctx.accent)],
-      if (ctx.soft.isNotEmpty) ...[_heading('Core Competencies', ctx.accent), _skillChips(ctx.soft, ctx.accent)],
-      if (ctx.projs.isNotEmpty) ...[_heading('Key Projects', ctx.accent), ...ctx.projs.map((pr) => _projBlock(pr))],
-      if (ctx.certs.isNotEmpty) ...[_heading('Certifications', ctx.accent), ...ctx.certs.map((x) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $x', style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333)))))],
-      if (ctx.langs.isNotEmpty) ...[_heading('Languages', ctx.accent), _skillChips(ctx.langs, ctx.accent)],
-      if (ctx.extra.isNotEmpty) ...[_heading('Achievements & Activities', ctx.accent), ...ctx.extra.map((x) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $x', style: const TextStyle(fontSize: 10.5, color: Color(0xFF333333)))))],
-      const SizedBox(height: 16),
-      Center(child: Text('Generated by ResumeAI Pro • ATS Optimized', style: TextStyle(fontSize: 9, color: Colors.grey[400]))),
+    return Container(color: Colors.white, padding: const EdgeInsets.all(22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(ctx.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ctx.accent)),
+      if (ctx.role.isNotEmpty) Text(ctx.role, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ctx.accent.withValues(alpha: 0.8))),
+      const SizedBox(height: 8),
+      Wrap(spacing: 12, runSpacing: 6, children: ctx.contacts.map((c) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(c['icon']!, style: const TextStyle(fontSize: 11)),
+        const SizedBox(width: 4),
+        Text(c['val']!, style: const TextStyle(fontSize: 10.5, color: Color(0xFF4A5568))),
+      ])).toList()),
+      const SizedBox(height: 10),
+      Container(height: 2, color: ctx.accent),
+      _sectionsBody(ctx),
     ]));
   }
 }
 
-// ── 7. Compact & Dense ─────────────────────────────────────
+// ── 7. Compact Executive ──────────────────────────────────
 class _CompactLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _CompactLayout({required this.ctx});
   @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white, padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(ctx.name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: ctx.accent)),
-      if (ctx.role.isNotEmpty) Text(ctx.role, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: ctx.accent)),
-      Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.only(bottom: 4),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ctx.accent, width: 1))),
-        child: Text(ctx.contacts.join('  •  '), style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
-      ),
+    return Container(color: Colors.white, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(ctx.name, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: ctx.accent)),
+          if (ctx.role.isNotEmpty) Text(ctx.role, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: ctx.accent.withValues(alpha: 0.8))),
+        ])),
+      ]),
+      const SizedBox(height: 6),
+      Wrap(spacing: 10, runSpacing: 4, children: ctx.contacts.map((c) => Text('${c['icon']} ${c['val']}', style: const TextStyle(fontSize: 10, color: Color(0xFF4A5568)))).toList()),
+      const SizedBox(height: 6),
+      Container(height: 1.5, color: ctx.accent),
       _sectionsBody(ctx),
     ]));
   }

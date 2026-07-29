@@ -398,15 +398,16 @@ RAW OLD CV TEXT (extracted from candidate's PDF/DOCX/Image):
 {req.job_description}
 
 INSTRUCTIONS:
-1. Extract and standardize personal contact info (name, phone, email, city, linkedin, github, target role).
-2. Read the additional new updates (which may be written informally or in Hinglish like "maine AWS certificate liya hai", "XYZ corp me software engineer join kiya 2024 me"):
+1. STRICT DATA PRESERVATION MANDATE: DO NOT DELETE, DROP, OR OMIT ANY PAST JOB EXPERIENCE, COMPANY, JOB TITLE, DEGREE, UNIVERSITY, CERTIFICATION, OR PROJECT FROM THE CANDIDATE'S RAW CV! Preserve 100% of the candidate's background.
+2. Extract and standardize personal contact info (name, phone, email, city, linkedin, github, target role).
+3. Read the additional new updates (which may be written informally or in Hinglish like "maine AWS certificate liya hai", "XYZ corp me software engineer join kiya 2024 me"):
    - Understand the intent completely.
    - Translate all Hindi/Hinglish to high-impact corporate/engineering English.
    - Intelligently merge new work experience as the most recent job, new skills into technical skills, new projects into projects, new certifications into certifications.
-3. Write a compelling 3-line professional summary.
-4. Enhance ALL work experience bullets with strong action verbs (Led, Architected, Delivered, Built, Reduced, Increased, Streamlined) and realistic metrics.
-5. Create comprehensive ATS-friendly technical and soft skills lists.
-6. Target a 1-page to max 2-page ATS structure.
+4. Write a compelling 3-line professional summary.
+5. Enhance ALL work experience bullets with strong action verbs (Led, Architected, Delivered, Built, Reduced, Increased, Streamlined) and realistic metrics.
+6. Create comprehensive ATS-friendly technical and soft skills lists.
+7. Target a 1-page to max 2-page ATS structure.
 
 CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
 {{
