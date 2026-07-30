@@ -182,4 +182,70 @@ class ApiService {
     } catch (_) {}
     return false;
   }
+
+  /// Incremental natural language edit (Hinglish/Hindi/English)
+  static Future<ResumeData> chatEditResume(ResumeData current, String userMessage) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/chat-edit'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'current_data': current.toJson(),
+        'user_message': userMessage,
+      }),
+    ).timeout(const Duration(seconds: 35));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return ResumeData.fromJson(data['data']);
+    }
+    throw Exception('Chat edit failed');
+  }
+
+  /// Evaluates candidate's resume from a Senior Recruiter perspective
+  static Future<Map<String, dynamic>> fetchRecruiterReview(ResumeData current) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/recruiter-review'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'resume_data': current.toJson()}),
+    ).timeout(const Duration(seconds: 25));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['review'] ?? {};
+    }
+    return {};
+  }
+
+  /// Fetches actionable bullet improvements
+  static Future<List<dynamic>> fetchSmartSuggestions(ResumeData current) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/smart-suggestions'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'resume_data': current.toJson()}),
+    ).timeout(const Duration(seconds: 25));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['suggestions'] ?? [];
+    }
+    return [];
+  }
+
+  /// Compares candidate resume to target JD and generates match score & optimized data
+  static Future<Map<String, dynamic>> matchJD(ResumeData current, String jobDescription) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/jd-match'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'resume_data': current.toJson(),
+        'job_description': jobDescription,
+      }),
+    ).timeout(const Duration(seconds: 45));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['match_result'] ?? {};
+    }
+    return {};
+  }
 }
