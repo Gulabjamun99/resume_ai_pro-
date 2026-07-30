@@ -1,6 +1,7 @@
 // lib/screens/result_screen.dart
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../models/resume_model.dart';
@@ -77,6 +78,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     ));
 
     _loadInitialAnalysis();
+    _loadUserPreferences();
   }
 
   @override
@@ -211,12 +213,183 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
   }
 
+  bool _hasUsedFreeDownload = false;
+  String _userEmail = '';
+  String _userPhone = '';
+
+  Future<void> _loadUserPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _hasUsedFreeDownload = prefs.getBool('free_download_used') ?? false;
+      _userEmail = prefs.getString('user_email') ?? '';
+      _userPhone = prefs.getString('user_phone') ?? '';
+    });
+  }
+
   Future<void> _handleDownload(String format) async {
+    // If candidate email/phone is missing, capture lead details first
+    if (_userEmail.isEmpty || _userPhone.isEmpty) {
+      _showLeadCaptureModal(format);
+      return;
+    }
+
+    // 1st Resume Download is 100% FREE!
+    if (!_hasUsedFreeDownload) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('free_download_used', true);
+      setState(() => _hasUsedFreeDownload = true);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎁 1st Resume Download Unlocked 100% FREE!'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+      await _executeDownload(format);
+      return;
+    }
+
+    // Subsequent downloads require payment
     if (!_isPaid) {
       _showPaymentModal(format);
       return;
     }
     await _executeDownload(format);
+  }
+
+  void _showLeadCaptureModal(String format) {
+    final emailCtrl = TextEditingController(text: (_resume.personal['email'] ?? '').toString());
+    final phoneCtrl = TextEditingController(text: (_resume.personal['phone'] ?? '').toString());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          String err = '';
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF13151C),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.card_giftcard, color: Color(0xFF10B981), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('🎁 1st Download is 100% FREE!', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                          Text('Enter email & phone to claim your free download', style: TextStyle(color: Colors.white54, fontSize: 11.5)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Enter Email ID (e.g. rahul@gmail.com)',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.white54, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Enter 10-digit Phone Number',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      prefixIcon: const Icon(Icons.phone_android, color: Colors.white54, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  if (err.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(err, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                  ],
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final em = emailCtrl.text.trim();
+                        final ph = phoneCtrl.text.trim();
+                        if (em.isEmpty || !em.contains('@')) {
+                          setModalState(() => err = 'Please enter a valid Email Address');
+                          return;
+                        }
+                        if (ph.length < 10) {
+                          setModalState(() => err = 'Please enter a valid 10-digit Phone Number');
+                          return;
+                        }
+
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('user_email', em);
+                        await prefs.setString('user_phone', ph);
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        setState(() {
+                          _userEmail = em;
+                          _userPhone = ph;
+                        });
+                        _handleDownload(format);
+                      },
+                      icon: const Icon(Icons.download, color: Colors.white, size: 18),
+                      label: const Text('Unlock 1st Free Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _executeDownload(String format) async {
