@@ -146,7 +146,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           _messages.removeLast();
           _messages.add(_ChatMsg(
             isAI: true,
-            text: 'I updated the resume format. You can inspect the changes in your live canvas.',
+            text: '⚠️ Could not reach server to apply this edit. Please check your internet connection or try again in a moment.',
           ));
           _isSending = false;
         });
