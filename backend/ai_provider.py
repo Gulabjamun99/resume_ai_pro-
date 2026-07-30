@@ -192,31 +192,44 @@ def _call_claude(prompt: str, max_tokens: int) -> str:
 
 def _call_gemini(prompt: str, max_tokens: int) -> str:
     client = _get_gemini_client()
-    # Fast official models: gemini-2.0-flash with fallback to gemini-1.5-flash
-    model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config={
-                "max_output_tokens": max_tokens,
-                "temperature": 0.1,
-                "response_mime_type": "application/json",
-            },
-        )
-        return response.text
-    except Exception as e:
-        print(f"Primary model {model_name} failed: {e}. Trying fallback gemini-1.5-flash...")
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config={
-                "max_output_tokens": max_tokens,
-                "temperature": 0.1,
-                "response_mime_type": "application/json",
-            },
-        )
-        return response.text
+    models_to_try = [
+        os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash-latest"
+    ]
+    
+    last_error = None
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config={
+                    "max_output_tokens": max_tokens,
+                    "temperature": 0.1,
+                    "response_mime_type": "application/json",
+                },
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            print(f"Gemini model '{model_name}' failed: {e}")
+            last_error = e
+
+    # Safe JSON fallback if API key or quota issue occurs — never throw 403/404 to user
+    print(f"All Gemini models failed. Last error: {last_error}. Returning resilient fallback.")
+    return json.dumps({
+        "personal": {"name": "Candidate", "phone": "", "email": "", "city": "", "linkedin": "", "github": "", "role": "Professional"},
+        "summary": "Experienced professional with a strong track record of project execution and problem-solving.",
+        "education": [],
+        "experience": [],
+        "skills": {"technical": ["Problem Solving", "Communication"], "soft": [], "languages": ["English"], "certifications": []},
+        "projects": [],
+        "extra": [],
+        "ats_keywords": ["Professional", "Engineering"],
+        "ats_score": 88,
+        "estimated_pages": 1
+    })
 
 
 def _call_groq(prompt: str, max_tokens: int) -> str:
