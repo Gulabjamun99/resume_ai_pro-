@@ -500,11 +500,31 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
         parsed = ai_provider.repair_json(json.dumps(raw)) if isinstance(raw, str) else raw
         if not isinstance(parsed, dict) or "personal" not in parsed or not parsed.get("personal", {}).get("name"):
             parsed = extract_raw_cv_fallback(req.extracted_text, req.additional_info)
-        return JSONResponse(content={"success": True, "data": parsed})
+        
+        proactive_sug = ai_provider.generate_proactive_suggestions(parsed)
+        design_spec = ai_provider.extract_design_fingerprint(req.extracted_text)
+        health_scores = ai_provider.generate_health_scores(parsed)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": parsed,
+            "proactive_suggestions": proactive_sug,
+            "design_spec": design_spec,
+            "health_scores": health_scores
+        })
     except Exception as e:
         traceback.print_exc()
         parsed = extract_raw_cv_fallback(req.extracted_text, req.additional_info)
-        return JSONResponse(content={"success": True, "data": parsed})
+        proactive_sug = ai_provider.generate_proactive_suggestions(parsed)
+        design_spec = ai_provider.extract_design_fingerprint(req.extracted_text)
+        health_scores = ai_provider.generate_health_scores(parsed)
+        return JSONResponse(content={
+            "success": True,
+            "data": parsed,
+            "proactive_suggestions": proactive_sug,
+            "design_spec": design_spec,
+            "health_scores": health_scores
+        })
 
 
 # ── Live Assistant Edit (Incremental & Section-Scoped) ──
@@ -552,7 +572,6 @@ Return ONLY valid JSON matching this exact structure:
         raw = ai_provider.generate_json(prompt, max_tokens=2200)
         parsed = ai_provider.repair_json(json.dumps(raw)) if isinstance(raw, str) else raw
         if not isinstance(parsed, dict) or "personal" not in parsed or not parsed.get("personal", {}).get("name"):
-            # If AI didn't return complete dict, perform smart local edit on current_data
             parsed = dict(current_data)
             if "summary" in user_msg.lower() or "choti" in user_msg.lower() or "short" in user_msg.lower():
                 old_sum = parsed.get("summary", "")
@@ -564,7 +583,24 @@ Return ONLY valid JSON matching this exact structure:
                 sk["certifications"] = certs
                 parsed["skills"] = sk
 
-        return JSONResponse(content={"success": True, "data": parsed, "message": "Resume updated successfully"})
+        # AI Resume Guardian Validation Check
+        guardian = ai_provider.validate_resume_patch(current_data, parsed)
+        if guardian.get("rollback_needed"):
+            return JSONResponse(content={
+                "success": True,
+                "data": current_data,
+                "message": guardian.get("reason", "Patch rolled back by AI Guardian to protect historical data."),
+                "guardian_blocked": True
+            })
+
+        health_scores = ai_provider.generate_health_scores(parsed)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": parsed,
+            "health_scores": health_scores,
+            "message": "Resume updated successfully"
+        })
     except Exception as e:
         traceback.print_exc()
         return JSONResponse(content={"success": True, "data": req.current_data, "message": "Resume updated"})

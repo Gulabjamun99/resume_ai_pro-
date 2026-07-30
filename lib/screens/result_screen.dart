@@ -64,10 +64,46 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     'Internship bullets tighten karo',
   ];
 
+  // Version History State Machine (Git Commit Tree)
+  final List<ResumeData> _versionHistory = [];
+  int _currentVersionIndex = 0;
+
+  void _undo() {
+    if (_currentVersionIndex > 0) {
+      setState(() {
+        _currentVersionIndex--;
+        _resume = _versionHistory[_currentVersionIndex];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⏪ Restored Version ${_currentVersionIndex + 1}'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  void _redo() {
+    if (_currentVersionIndex < _versionHistory.length - 1) {
+      setState(() {
+        _currentVersionIndex++;
+        _resume = _versionHistory[_currentVersionIndex];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⏩ Redid to Version ${_currentVersionIndex + 1}'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _resume = widget.resumeData;
+    _versionHistory.add(widget.resumeData);
+    _currentVersionIndex = 0;
     _activeTemplateId = widget.templateId;
     _activeTemplateColor = widget.templateColor;
     _tabController = TabController(length: 5, vsync: this);
@@ -137,6 +173,11 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             isAI: true,
             text: '✅ Resume updated successfully! All requested changes are live in your preview canvas.',
           ));
+          if (_currentVersionIndex < _versionHistory.length - 1) {
+            _versionHistory.removeRange(_currentVersionIndex + 1, _versionHistory.length);
+          }
+          _versionHistory.add(updated);
+          _currentVersionIndex = _versionHistory.length - 1;
           _resume = updated;
           _isSending = false;
         });
@@ -705,10 +746,22 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           ],
         ),
         actions: [
+          // Undo Button
+          IconButton(
+            icon: Icon(Icons.undo, color: _currentVersionIndex > 0 ? Colors.white : Colors.white24, size: 20),
+            tooltip: 'Undo Edit (⏪)',
+            onPressed: _currentVersionIndex > 0 ? _undo : null,
+          ),
+          // Redo Button
+          IconButton(
+            icon: Icon(Icons.redo, color: _currentVersionIndex < _versionHistory.length - 1 ? Colors.white : Colors.white24, size: 20),
+            tooltip: 'Redo Edit (⏩)',
+            onPressed: _currentVersionIndex < _versionHistory.length - 1 ? _redo : null,
+          ),
           // ATS Score Chip
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF10B981).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
@@ -716,9 +769,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             ),
             child: Row(
               children: [
-                const Icon(Icons.verified, size: 13, color: Color(0xFF10B981)),
+                const Icon(Icons.verified, size: 12, color: Color(0xFF10B981)),
                 const SizedBox(width: 4),
-                Text('ATS ${_resume.atsScore}/100', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                Text('ATS ${_resume.atsScore}/100', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
               ],
             ),
           ),
