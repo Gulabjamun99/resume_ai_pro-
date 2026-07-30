@@ -70,6 +70,7 @@ class ResumeData {
   int? jdMatchScore;
   List<dynamic> jdKeywordsMatched;
   List<dynamic> jdKeywordsMissing;
+  Map<String,dynamic> extraUnknownFields;
 
   ResumeData({
     required this.personal, required this.summary,
@@ -80,31 +81,55 @@ class ResumeData {
     this.jdMatchScore,
     this.jdKeywordsMatched = const [],
     this.jdKeywordsMissing = const [],
-  });
+    Map<String,dynamic>? extraUnknownFields,
+  }) : extraUnknownFields = extraUnknownFields ?? {};
 
-  factory ResumeData.fromJson(Map<String,dynamic> j) => ResumeData(
-    personal: j['personal'] ?? {},
-    summary: j['summary'] ?? '',
-    education: j['education'] ?? [],
-    experience: j['experience'] ?? [],
-    skills: j['skills'] ?? {},
-    projects: j['projects'] ?? [],
-    extra: j['extra'] ?? [],
-    atsKeywords: j['ats_keywords'] ?? [],
-    atsScore: j['ats_score'] ?? 90,
-    jdMatchScore: j['jd_match_score'],
-    jdKeywordsMatched: j['jd_keywords_matched'] ?? [],
-    jdKeywordsMissing: j['jd_keywords_missing'] ?? [],
-  );
+  factory ResumeData.fromJson(Map<String,dynamic> j) {
+    const knownKeys = {
+      'personal', 'summary', 'education', 'experience', 'skills',
+      'projects', 'extra', 'ats_keywords', 'ats_score', 'jd_match_score',
+      'jd_keywords_matched', 'jd_keywords_missing'
+    };
+    final unknown = <String, dynamic>{};
+    j.forEach((key, value) {
+      if (!knownKeys.contains(key)) {
+        unknown[key] = value;
+      }
+    });
 
-  Map<String,dynamic> toJson() => {
-    'personal': personal, 'summary': summary,
-    'education': education, 'experience': experience,
-    'skills': skills, 'projects': projects,
-    'extra': extra, 'ats_keywords': atsKeywords,
-    'ats_score': atsScore,
-    if (jdMatchScore != null) 'jd_match_score': jdMatchScore,
-    'jd_keywords_matched': jdKeywordsMatched,
-    'jd_keywords_missing': jdKeywordsMissing,
-  };
+    return ResumeData(
+      personal: Map<String,dynamic>.from(j['personal'] ?? {}),
+      summary: j['summary'] ?? '',
+      education: List<dynamic>.from(j['education'] ?? []),
+      experience: List<dynamic>.from(j['experience'] ?? []),
+      skills: Map<String,dynamic>.from(j['skills'] ?? {}),
+      projects: List<dynamic>.from(j['projects'] ?? []),
+      extra: List<dynamic>.from(j['extra'] ?? []),
+      atsKeywords: List<dynamic>.from(j['ats_keywords'] ?? []),
+      atsScore: j['ats_score'] ?? 90,
+      jdMatchScore: j['jd_match_score'],
+      jdKeywordsMatched: List<dynamic>.from(j['jd_keywords_matched'] ?? []),
+      jdKeywordsMissing: List<dynamic>.from(j['jd_keywords_missing'] ?? []),
+      extraUnknownFields: unknown,
+    );
+  }
+
+  Map<String,dynamic> toJson() {
+    final map = <String,dynamic>{
+      'personal': personal,
+      'summary': summary,
+      'education': education,
+      'experience': experience,
+      'skills': skills,
+      'projects': projects,
+      'extra': extra,
+      'ats_keywords': atsKeywords,
+      'ats_score': atsScore,
+      'jd_match_score': jdMatchScore,
+      'jd_keywords_matched': jdKeywordsMatched,
+      'jd_keywords_missing': jdKeywordsMissing,
+    };
+    map.addAll(extraUnknownFields);
+    return map;
+  }
 }
