@@ -80,7 +80,7 @@ class _TemplateSelectorScreenState extends State<TemplateSelectorScreen> {
             height: 32,
             child: ListView(scrollDirection: Axis.horizontal, children: [
               _FilterChip(label: 'All (${kResumeTemplates.length})', value: 'all', active: _filter, onTap: (v) => setState(() => _filter = v)),
-              _FilterChip(label: '✨ Zety Style (6)', value: 'zety', active: _filter, onTap: (v) => setState(() => _filter = v)),
+              _FilterChip(label: '✨ Featured (6)', value: 'featured', active: _filter, onTap: (v) => setState(() => _filter = v)),
               _FilterChip(label: 'Classic', value: 'classic', active: _filter, onTap: (v) => setState(() => _filter = v)),
               _FilterChip(label: 'Modern', value: 'modern', active: _filter, onTap: (v) => setState(() => _filter = v)),
               _FilterChip(label: 'Creative', value: 'creative', active: _filter, onTap: (v) => setState(() => _filter = v)),

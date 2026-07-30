@@ -306,7 +306,7 @@ Widget _sectionsBody(_ResumeContext ctx, {bool skillsSolid = false}) {
   ]);
 }
 
-// ── 🌟 ZETY CASCADE (Dual Panel Template) ─────────────────
+// ── 🌟 CASCADE SIDEBAR PRO ───────────────────────────────
 class _CascadeLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _CascadeLayout({required this.ctx});
@@ -394,7 +394,7 @@ class _CascadeLayout extends StatelessWidget {
   }
 }
 
-// ── 🌟 ZETY PRIMO (Avatar & Pill Badges) ──────────────────
+// ── 🌟 PRIMO EXECUTIVE ───────────────────────────────────
 class _PrimoLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _PrimoLayout({required this.ctx});
@@ -425,7 +425,7 @@ class _PrimoLayout extends StatelessWidget {
   }
 }
 
-// ── 🌟 ZETY CONCEPT (Timeline Connector) ──────────────────
+// ── 🌟 CONCEPT TIMELINE ─────────────────────────────────
 class _ConceptLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _ConceptLayout({required this.ctx});
@@ -450,7 +450,7 @@ class _ConceptLayout extends StatelessWidget {
   }
 }
 
-// ── 🌟 ZETY VIBES (Creative Banners) ──────────────────────
+// ── 🌟 VIBES CREATIVE ─────────────────────────────────────
 class _VibesLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _VibesLayout({required this.ctx});
@@ -468,7 +468,7 @@ class _VibesLayout extends StatelessWidget {
   }
 }
 
-// ── 🌟 ZETY CUBIC (Block Card Design) ─────────────────────
+// ── 🌟 CUBIC CARD BLOCKS ──────────────────────────────────
 class _CubicLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _CubicLayout({required this.ctx});
@@ -491,7 +491,7 @@ class _CubicLayout extends StatelessWidget {
   }
 }
 
-// ── 🌟 ZETY DIAMOND (Executive Diamond Bullets) ───────────
+// ── 🌟 DIAMOND LEADERSHIP ─────────────────────────────────
 class _DiamondLayout extends StatelessWidget {
   final _ResumeContext ctx;
   const _DiamondLayout({required this.ctx});
