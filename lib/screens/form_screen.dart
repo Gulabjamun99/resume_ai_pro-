@@ -409,9 +409,23 @@ Or leave it blank — AI will generate a strong summary automatically.''',
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            height: 52,
             child: ElevatedButton(
               onPressed: _proceed,
-              child: const Text('Review & Verify My Data →'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                elevation: 4,
+                shadowColor: AppColors.accent.withOpacity(0.4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Choose Template & Verify Data', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15)),
+                  SizedBox(width: 6),
+                  Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 18),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 30),
