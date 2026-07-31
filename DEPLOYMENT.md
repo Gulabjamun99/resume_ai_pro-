@@ -42,6 +42,17 @@ PORT=8000
 
 ---
 
+## 🔑 GitHub Secrets & CI/CD Environment Variables
+
+ResumeAI Pro uses **Render Webhook Integration** for automatic deployments on push to `main`:
+
+1. **Render Environment Variables**: Secrets (`GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `ENVIRONMENT=production`) are configured directly inside the **Render Dashboard Environment Settings**. GitHub Secrets are not required for Render deployments.
+2. **GitHub Actions CI/CD Secrets (Optional)**:
+   - `GEMINI_API_KEY`: Add to GitHub Repo Secrets if you want CI automated steps to invoke real Gemini AI endpoints during `python scratch/verify_real_e2e_pipeline.py`.
+   - Without `GEMINI_API_KEY` in GitHub Secrets, the CI pipeline falls back gracefully to mock test fixtures.
+
+---
+
 ## 🐳 Docker Deployment
 
 Build and run backend container:
