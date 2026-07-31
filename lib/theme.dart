@@ -22,6 +22,7 @@ class AppColors {
 
 ThemeData appTheme() {
   return ThemeData(
+    useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: AppColors.bg,
     colorScheme: const ColorScheme.dark(
