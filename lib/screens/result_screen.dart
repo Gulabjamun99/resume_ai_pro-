@@ -824,36 +824,57 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       ),
 
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: const BoxDecoration(
-          color: Color(0xFF161922),
-          border: Border(top: BorderSide(color: Colors.white10)),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161922),
+          border: const Border(top: BorderSide(color: Colors.white12, width: 1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
         child: SafeArea(
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _isDownloading ? null : () => _handleDownload('doc'),
-                  icon: const Icon(Icons.description, color: Colors.white, size: 18),
-                  label: const Text('Download DOCX', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: SizedBox(
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: _isDownloading ? null : () => _handleDownload('doc'),
+                    icon: const Icon(Icons.description_outlined, color: Colors.white, size: 20),
+                    label: const Text(
+                      'Download DOCX',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white24, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isDownloading ? null : () => _handleDownload('pdf'),
-                  icon: const Icon(Icons.download, color: Colors.white, size: 18),
-                  label: Text(_isPaid ? 'Download PDF' : 'Download PDF (₹$_amount)', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _isDownloading ? null : () => _handleDownload('pdf'),
+                    icon: _isDownloading
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+                    label: Text(
+                      _isPaid ? 'Download PDF' : 'Download PDF (₹$_amount)',
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      elevation: 4,
+                      shadowColor: AppColors.accent.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ),
