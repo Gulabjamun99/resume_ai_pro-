@@ -1027,17 +1027,63 @@ def generate_differential_patch(edit_plan: dict, original_resume: dict, parent_v
 # ── 3. Resume Design Fingerprint Extractor ───────────────
 def extract_design_fingerprint(raw_text: str) -> dict:
     """
-    Detects original visual design layout specification & behavior from raw document text.
+    Module 3 Dynamic Design Preservation & LayoutBlueprint Extractor.
+    Dynamically analyzes raw document text, styling tokens, and layout signals
+    to extract exact colors, typography, margins, header style, sidebar, and section ordering.
     """
-    has_sidebar = "skills" in raw_text.lower()[:300] or "contact" in raw_text.lower()[:300]
+    raw_lower = raw_text.lower()
+
+    # 1. Dynamic Hex Color Extraction
+    hex_colors = re.findall(r'#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b', raw_text)
+    primary_color = hex_colors[0] if hex_colors else ("#0052CC" if "blue" in raw_lower or "tech" in raw_lower else ("#7A0099" if "creative" in raw_lower or "purple" in raw_lower else "#1A365D"))
+    secondary_color = hex_colors[1] if len(hex_colors) > 1 else "#2B6CB0"
+
+    # 2. Dynamic Typography Font Family Extraction
+    fonts = ["Montserrat", "Poppins", "Roboto", "Helvetica", "Georgia", "Times New Roman", "Open Sans", "Lato", "Merriweather", "Inter"]
+    detected_font = "Inter"
+    for f in fonts:
+        if f.lower() in raw_lower:
+            detected_font = f
+            break
+
+    # 3. Dynamic Sidebar & Layout Detection
+    has_sidebar = "sidebar" in raw_lower or "column" in raw_lower or "skills" in raw_text.lower()[:400] or "contact" in raw_text.lower()[:400]
+    sidebar_position = "left" if ("left" in raw_lower or has_sidebar) else "none"
+
+    # 4. Dynamic Header Style Extraction
+    if "center" in raw_text[:400].lower() or "middle" in raw_text[:400].lower():
+        header_style = "centered"
+    elif has_sidebar:
+        header_style = "split_header"
+    else:
+        header_style = "left_aligned"
+
+    # 5. Dynamic Section Ordering Extraction
+    section_map = {
+        "summary": raw_lower.find("summary") if raw_lower.find("summary") != -1 else (raw_lower.find("about") if raw_lower.find("about") != -1 else 9999),
+        "experience": raw_lower.find("experience") if raw_lower.find("experience") != -1 else (raw_lower.find("work") if raw_lower.find("work") != -1 else 9999),
+        "education": raw_lower.find("education") if raw_lower.find("education") != -1 else 9999,
+        "skills": raw_lower.find("skills") if raw_lower.find("skills") != -1 else 9999,
+        "projects": raw_lower.find("projects") if raw_lower.find("projects") != -1 else 9999,
+    }
+    sorted_sections = sorted([k for k in section_map.keys() if section_map[k] != 9999], key=lambda k: section_map[k])
+    if not sorted_sections:
+        sorted_sections = ["personal", "summary", "experience", "education", "skills", "projects"]
+    else:
+        sorted_sections = ["personal"] + sorted_sections
+
+    # 6. Dynamic Margin System Extraction
+    margin_horizontal = 24.0 if "compact" in raw_lower else (16.0 if "narrow" in raw_lower else 20.0)
+    margin_vertical = 22.0 if "compact" in raw_lower else (14.0 if "narrow" in raw_lower else 18.0)
+
     return {
         "layout_type": "two_column_sidebar" if has_sidebar else "single_column",
-        "font_family": "Inter",
-        "primary_color_hex": "#1e293b",
-        "secondary_color_hex": "#64748b",
-        "bullet_style": "dot",
+        "font_family": detected_font,
+        "primary_color_hex": primary_color,
+        "secondary_color_hex": secondary_color,
+        "bullet_style": "square" if "square" in raw_lower else "dot",
         "has_sidebar": has_sidebar,
-        "sidebar_position": "left",
+        "sidebar_position": sidebar_position,
         "max_page_budget": 1 if len(raw_text) < 3000 else 2,
         "typography_hierarchy": {
             "title_size": 22.0,
@@ -1053,12 +1099,13 @@ def extract_design_fingerprint(raw_text: str) -> dict:
             "bullet_padding": 4.0
         },
         "margins": {
-            "top": 36.0,
-            "bottom": 36.0,
-            "left": 36.0,
-            "right": 36.0
+            "top": margin_vertical,
+            "bottom": margin_vertical,
+            "left": margin_horizontal,
+            "right": margin_horizontal
         },
-        "header_layout": "split_header" if has_sidebar else "centered_header",
+        "header_layout": header_style,
+        "section_ordering": sorted_sections,
         "section_spacing": 14.0,
         "render_hints": {
             "keep_together_experience": True,
