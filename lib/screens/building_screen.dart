@@ -1,5 +1,6 @@
 // lib/screens/building_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
 import '../models/resume_model.dart';
 import '../services/api_service.dart';
@@ -34,60 +35,56 @@ class BuildingScreen extends StatefulWidget {
 class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStateMixin {
   bool get _isJD => widget.jobDescription.isNotEmpty;
 
-  late final List<String> _steps = widget.isAutoBuildFromCV ? [
-    'Reading old CV & analyzing user updates...',
-    'Translating Hinglish/English updates into professional phrasing...',
-    'Merging work experience, skills & education...',
-    'Generating ATS-optimized professional summary...',
-    'Building responsive layout & ATS keyword score...',
-  ] : (_isJD ? [
-    'Reading the job description carefully...',
-    'Identifying key skills and keywords this JD wants...',
-    'Setting up personal info and contact section...',
-    'Reframing your experience to match this JD...',
-    'Reordering skills — JD-relevant ones first...',
-    'Writing a summary tailored to this specific role...',
-    'Checking JD match score...',
-    'Final layout and ATS check...',
-  ] : [
-    'Setting up personal info and contact section...',
-    'Formatting education and qualifications...',
-    'Enhancing work experience with strong action verbs...',
-    'Injecting industry-specific ATS keywords...',
-    'Generating a powerful professional summary...',
-    'Arranging skills in ATS-friendly format...',
-    'Polishing projects and achievements...',
-    'Final layout and ATS score check...',
-  ]);
-  int _currentStep = 0;
-  double _progress = 0;
+  late final List<Map<String, String>> _pipelineStages = [
+    {'title': 'Module 1 & 2: Resume Parsing & Intelligence Graph', 'desc': 'Extracting career taxonomy & skill graph'},
+    {'title': 'Module 3: Design Preservation Engine', 'desc': 'Structuring typography & visual specs'},
+    {'title': 'Module 5: Cognitive Thinking Engine', 'desc': 'Formulating section-scoped edit plan'},
+    {'title': 'Module 6: Differential Patch Engine', 'desc': 'Generating non-destructive JSON patch'},
+    {'title': 'Module 7: AI Resume Guardian Safety Gate', 'desc': 'Evaluating 5-stage historical truthfulness'},
+    {'title': 'Module 8: Multi-Dimensional Health Engine', 'desc': 'Calculating ATS compatibility score'},
+    {'title': 'Module 9: Real-Time Rendering Engine', 'desc': 'Computing layout stability & SHA-256 fingerprint'},
+    {'title': 'Module 10: Multi-Version Control Engine', 'desc': 'Persisting version commit in SQLite'},
+  ];
+
+  int _currentStage = 0;
+  double _progress = 0.05;
   String _error = '';
-  late AnimationController _floatController;
-  late Animation<double> _floatAnim;
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _floatController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: 0, end: -8).animate(CurvedAnimation(parent: _floatController, curve: Curves.easeInOut));
-    _startBuild();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _executeBuildPipeline();
   }
 
   @override
   void dispose() {
-    _floatController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
-  Future<void> _startBuild() async {
-    // Animate steps while API call happens
-    final stepInterval = Duration(milliseconds: 500);
-    for (int i = 0; i < _steps.length - 1; i++) {
-      await Future.delayed(stepInterval);
-      if (mounted) setState(() {
-        _currentStep = i + 1;
-        _progress = (i + 1) / _steps.length * 0.85;
-      });
+  Future<void> _executeBuildPipeline() async {
+    setState(() {
+      _error = '';
+      _progress = 0.05;
+      _currentStage = 0;
+    });
+
+    // Animate stage progression smoothly while API runs
+    final stageDuration = const Duration(milliseconds: 350);
+    for (int i = 0; i < _pipelineStages.length - 1; i++) {
+      await Future.delayed(stageDuration);
+      if (mounted) {
+        setState(() {
+          _currentStage = i + 1;
+          _progress = (i + 1) / _pipelineStages.length * 0.90;
+        });
+      }
     }
 
     try {
@@ -101,111 +98,264 @@ class _BuildingScreenState extends State<BuildingScreen> with TickerProviderStat
           templateColor: widget.templateColor,
         );
       } else if (_isJD) {
-        resumeData = await ApiService.generateJDTailoredResume(widget.request!, widget.jobDescription, templateId: widget.templateId, templateColor: widget.templateColor);
+        resumeData = await ApiService.generateJDTailoredResume(
+          widget.request!,
+          widget.jobDescription,
+          templateId: widget.templateId,
+          templateColor: widget.templateColor,
+        );
       } else {
-        resumeData = await ApiService.generateResume(widget.request!, templateId: widget.templateId, templateColor: widget.templateColor);
+        resumeData = await ApiService.generateResume(
+          widget.request!,
+          templateId: widget.templateId,
+          templateColor: widget.templateColor,
+        );
       }
 
       if (mounted) {
-        setState(() { _progress = 1.0; _currentStep = _steps.length; });
-        await Future.delayed(const Duration(milliseconds: 400));
-        Navigator.pushReplacement(context, MaterialPageRoute(
-          builder: (_) => ResultScreen(
-            resumeData: resumeData, plan: widget.plan,
-            templateId: widget.templateId, templateColor: widget.templateColor,
-            editsMax: widget.editsMax, isJDTailored: _isJD,
+        setState(() {
+          _progress = 1.0;
+          _currentStage = _pipelineStages.length;
+        });
+        await Future.delayed(const Duration(milliseconds: 300));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultScreen(
+              resumeData: resumeData,
+              plan: widget.plan,
+              templateId: widget.templateId,
+              templateColor: widget.templateColor,
+              editsMax: widget.editsMax,
+              isJDTailored: _isJD,
+            ),
           ),
-        ));
+        );
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) {
+        setState(() => _error = e.toString());
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final percentInt = (_progress * 100).toInt();
+    final remainingSecs = (100 - percentInt) ~/ 20;
+
     return Scaffold(
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              // Floating document icon
-              AnimatedBuilder(
-                animation: _floatAnim,
-                builder: (_, child) => Transform.translate(offset: Offset(0, _floatAnim.value), child: child),
-                child: const Text('📄', style: TextStyle(fontSize: 52)),
-              ),
-              const SizedBox(height: 20),
-              Text(_isJD ? 'Tailoring Your Resume to This Job...' : 'Writing Your Resume...', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.text)),
-              const SizedBox(height: 6),
-              Text(_isJD ? 'Matching your experience to this job description' : 'Reading your data and structuring your resume', style: const TextStyle(fontSize: 13, color: AppColors.text2)),
-              const SizedBox(height: 24),
-
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _progress,
-                  minHeight: 6,
-                  backgroundColor: AppColors.bg3,
-                  color: AppColors.accent,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Steps
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: AppColors.bg3, border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(10)),
-                child: Column(children: _steps.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final isDone = i < _currentStep;
-                  final isActive = i == _currentStep;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: 8, height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDone ? AppColors.green : (isActive ? AppColors.accent : AppColors.border2),
-                        ),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated Glowing AI Sphere
+                ScaleTransition(
+                  scale: Tween<double>(begin: 0.95, end: 1.05).animate(
+                    CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+                  ),
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [AppColors.accent, AppColors.green],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(
-                        entry.value,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDone ? AppColors.text2 : (isActive ? AppColors.accent : AppColors.text3),
-                          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withOpacity(0.4),
+                          blurRadius: 20,
+                          spreadRadius: 4,
                         ),
-                      )),
-                      if (isDone) const Text('✓', style: TextStyle(color: AppColors.green, fontSize: 12)),
-                    ]),
-                  );
-                }).toList()),
-              ),
-
-              // Error
-              if (_error.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: AppColors.red.withOpacity(0.1), border: Border.all(color: AppColors.red.withOpacity(0.3)), borderRadius: BorderRadius.circular(10)),
-                  child: Column(children: [
-                    const Text('❌ Error', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    Text(_error, style: const TextStyle(color: AppColors.text2, fontSize: 12), textAlign: TextAlign.center),
-                    const SizedBox(height: 10),
-                    const Text('Is the backend running?\nuvicorn main:app --port 8000 --reload', style: TextStyle(color: AppColors.text3, fontSize: 11), textAlign: TextAlign.center),
-                    const SizedBox(height: 10),
-                    ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('← Back')),
-                  ]),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 36),
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 24),
+
+                Text(
+                  _isJD ? 'Tailoring Resume to Target Job...' : 'Building Resume Workspace...',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                    letterSpacing: -0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ).animate().fadeIn(duration: 400.ms),
+                const SizedBox(height: 6),
+                Text(
+                  _isJD
+                      ? 'Executing 10-module AI intelligence pipeline & ATS keyword alignment'
+                      : 'Executing 10-module AI engine with Guardian safety checks',
+                  style: const TextStyle(fontSize: 13, color: AppColors.text2),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 24),
+
+                // Percentage Progress Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$percentInt% Completed',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.accent),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg3,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        'Est. ${remainingSecs > 0 ? remainingSecs : 1}s remaining',
+                        style: const TextStyle(fontSize: 11, color: AppColors.text3, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    minHeight: 8,
+                    backgroundColor: AppColors.bg3,
+                    color: AppColors.accent,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 8-Stage Pipeline Card
+                AppCard(
+                  child: Column(
+                    children: _pipelineStages.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final stage = entry.value;
+                      final isDone = idx < _currentStage;
+                      final isActive = idx == _currentStage;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isDone
+                                    ? AppColors.green
+                                    : (isActive ? AppColors.accent : AppColors.border2),
+                              ),
+                              child: Center(
+                                child: isDone
+                                    ? const Icon(Icons.check_rounded, color: Colors.black, size: 13)
+                                    : (isActive
+                                        ? const SizedBox(
+                                            width: 10,
+                                            height: 10,
+                                            child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                                          )
+                                        : Text('${idx + 1}', style: const TextStyle(fontSize: 9, color: Colors.white70))),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    stage['title']!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                                      color: isDone ? AppColors.text : (isActive ? AppColors.accent : AppColors.text3),
+                                    ),
+                                  ),
+                                  if (isActive)
+                                    Text(
+                                      stage['desc']!,
+                                      style: const TextStyle(fontSize: 10, color: AppColors.text2),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                // Error Retry Box
+                if (_error.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.red.withOpacity(0.12),
+                      border: Border.all(color: AppColors.red.withOpacity(0.4)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.error_outline_rounded, color: AppColors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text('Build Failed', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w700, fontSize: 14)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_error, style: const TextStyle(color: AppColors.text2, fontSize: 12), textAlign: TextAlign.center),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.border2),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const Text('Back', style: TextStyle(color: AppColors.text)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _executeBuildPipeline,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accent,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const Text('Retry Build', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ]),
+            ),
           ),
         ),
       ),
