@@ -271,10 +271,27 @@ class _DetailPanel extends StatelessWidget {
       )).toList()),
       const SizedBox(height: 18),
 
-      SizedBox(width: double.infinity, child: ElevatedButton(
-        onPressed: onContinue,
-        child: Text('Use "${template.name}" →'),
-      )),
+      SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: onContinue,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            elevation: 4,
+            shadowColor: AppColors.accent.withOpacity(0.4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Use This Template & Continue', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15)),
+              SizedBox(width: 6),
+              Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 18),
+            ],
+          ),
+        ),
+      ),
     ]));
   }
 }
