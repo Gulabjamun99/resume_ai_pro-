@@ -229,7 +229,7 @@ class LandingScreen extends StatelessWidget {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.target, color: AppColors.blue, size: 18),
+                      Icon(Icons.gps_fixed_rounded, color: AppColors.blue, size: 18),
                       SizedBox(width: 8),
                       Text(
                         'Tailor to Job Description — ₹10',

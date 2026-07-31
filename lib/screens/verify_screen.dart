@@ -61,7 +61,7 @@ class VerifyScreen extends StatelessWidget {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.target, color: AppColors.blue, size: 16),
+                              Icon(Icons.gps_fixed_rounded, color: AppColors.blue, size: 16),
                               SizedBox(width: 6),
                               Text('Tailoring to Target Job Description', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.blue)),
                             ],
