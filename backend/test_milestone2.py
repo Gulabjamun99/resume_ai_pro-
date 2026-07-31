@@ -76,3 +76,41 @@ def test_concurrent_api_requests():
     assert len(results) == 10
     assert all(r.status_code == 200 for r in results)
     _rate_limit_store.clear()
+
+def test_invalid_payload_rejection():
+    # Invalid email address in session creation
+    resp = client.post("/api/auth/session", json={"user_email": "notanemail"})
+    assert resp.status_code == 400
+
+    # Missing authorization header in session verification
+    resp_v = client.get("/api/auth/verify")
+    assert resp_v.status_code == 401
+
+def test_guardian_hallucination_rejection():
+    import ai_provider
+    orig = {"personal": {"name": "Alice"}, "experience": [{"co": "Google", "des": "Engineer"}]}
+    tampered_patch = {
+        "patch_id": "p_fake",
+        "affected_sections": ["experience"],
+        "after_snapshot": {"experience": []},
+        "patch_operations": [{"after_state": "fake company"}]
+    }
+    
+    val = ai_provider.validate_resume_patch(orig, tampered_patch)
+    assert val["rollback_required"] is True or val["guardian_status"] == "REJECTED"
+
+
+
+def test_binary_download_integrity():
+    payload = {
+        "resume_data": {"personal": {"name": "Test Download", "role": "Architect"}},
+        "format": "pdf"
+    }
+    res_pdf = client.post("/download/pdf", json=payload)
+    assert res_pdf.status_code == 200
+    assert res_pdf.content.startswith(b"%PDF-")
+
+    res_doc = client.post("/download/doc", json={"resume_data": payload["resume_data"], "format": "doc"})
+    assert res_doc.status_code == 200
+    assert res_doc.content.startswith(b"PK\x03\x04")
+

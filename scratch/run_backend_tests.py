@@ -16,7 +16,10 @@ from test_pipeline import (
 from test_milestone2 import (
     test_session_auth_lifecycle,
     test_rate_limiting_enforcement,
-    test_concurrent_api_requests
+    test_concurrent_api_requests,
+    test_invalid_payload_rejection,
+    test_guardian_hallucination_rejection,
+    test_binary_download_integrity
 )
 
 def run():
@@ -34,8 +37,12 @@ def run():
         ("Version Control Lifecycle & SQLite Persistence", test_version_lifecycle_and_sqlite_persistence),
         ("Bearer Token Auth & Session Management", test_session_auth_lifecycle),
         ("API Rate Limiting Enforcement (HTTP 429)", test_rate_limiting_enforcement),
-        ("Multi-Threaded Concurrency Handling", test_concurrent_api_requests)
+        ("Multi-Threaded Concurrency Handling", test_concurrent_api_requests),
+        ("Invalid Payload & Input Sanitization", test_invalid_payload_rejection),
+        ("Guardian Hallucination Rejection Gate", test_guardian_hallucination_rejection),
+        ("Real PDF & DOCX Binary Stream Integrity", test_binary_download_integrity)
     ]
+
 
 
     passed = 0

@@ -24,13 +24,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Rate Limiting & Audit Logging Middleware ─────────────
+# ── Environment & Startup Validation ──────────────────────
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+logger.info(f"Starting ResumeAI Pro Backend in '{ENVIRONMENT}' mode. AI Provider: '{ai_provider.PROVIDER}'")
+
+# ── Rate Limiting, Audit Logging & Security Headers Middleware ─
 _rate_limit_store = {}
 RATE_LIMIT_MAX = 60
 RATE_LIMIT_WINDOW = 60
 
 @app.middleware("http")
-async def rate_limit_and_logging_middleware(request: Request, call_next):
+async def security_and_rate_limit_middleware(request: Request, call_next):
     client_ip = request.client.host if request.client else "127.0.0.1"
     now = time.time()
     
@@ -50,6 +54,13 @@ async def rate_limit_and_logging_middleware(request: Request, call_next):
     t0 = time.time()
     response = await call_next(request)
     dt = round((time.time() - t0) * 1000, 2)
+    
+    # Secure HTTP Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    
     logger.info(f"{request.method} {request.url.path} -> Status {response.status_code} ({dt}ms) [IP: {client_ip}]")
     return response
 
@@ -57,12 +68,13 @@ async def rate_limit_and_logging_middleware(request: Request, call_next):
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 
-# ── Database Setup (Zero-Cost Bootstrapping) ──
+# ── Database Setup (SQLite WAL Mode & Hardened Indexes) ──
 DB_FILE = os.path.join(os.path.dirname(__file__), "db.sqlite3")
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS payments (
         utr TEXT PRIMARY KEY,
@@ -79,10 +91,13 @@ def init_db():
         last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_utr ON payments(utr);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);")
     conn.commit()
     conn.close()
 
 init_db()
+
 
 
 # AI provider (Gemini / Claude / Groq) is configured via ai_provider.py

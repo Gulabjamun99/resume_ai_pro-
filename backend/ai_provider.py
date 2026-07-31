@@ -1116,6 +1116,7 @@ def _get_db():
 def init_version_db():
     conn = _get_db()
     cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS version_commits (
         version_index INTEGER PRIMARY KEY,
@@ -1138,8 +1139,10 @@ def init_version_db():
         audit_trail TEXT NOT NULL
     )
     """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_version_commits_id ON version_commits(version_id);")
     conn.commit()
     conn.close()
+
 
 # Auto-initialize version table on module load
 init_version_db()
