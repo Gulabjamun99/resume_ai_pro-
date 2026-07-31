@@ -14,7 +14,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("resume_ai")
 
-app = FastAPI(title="ResumeAI Pro Backend")
+app = FastAPI(
+    title="ResumeAI Pro Backend",
+    version="1.0.0",
+    description="ResumeAI Pro General Availability (v1.0.0) Enterprise REST APIs"
+)
 
 app.add_middleware(
     CORSMiddleware,
