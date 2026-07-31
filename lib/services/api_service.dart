@@ -248,4 +248,79 @@ class ApiService {
     }
     return {};
   }
+
+  /// Fetch all version commits from backend (SQLite persisted)
+  static Future<List<dynamic>> fetchVersionList() async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/api/version/list'))
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        return data['versions'] ?? [];
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// Rollback to target version index (non-destructive)
+  static Future<Map<String, dynamic>> rollbackVersion(int targetVersionIndex) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/version/rollback'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'target_version_index': targetVersionIndex}),
+    ).timeout(const Duration(seconds: 20));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['commit'] ?? {};
+    }
+    throw Exception('Rollback failed');
+  }
+
+  /// Diff two versions
+  static Future<Map<String, dynamic>> diffVersions(int versionAIndex, int versionBIndex) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/version/diff'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'version_a_index': versionAIndex,
+        'version_b_index': versionBIndex,
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['diff'] ?? {};
+    }
+    return {};
+  }
+
+  /// Time Travel preview
+  static Future<Map<String, dynamic>> previewVersion(int versionIndex) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/version/preview'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'version_index': versionIndex}),
+    ).timeout(const Duration(seconds: 20));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['preview'] ?? {};
+    }
+    return {};
+  }
+
+  /// Fetch Version Analytics
+  static Future<Map<String, dynamic>> fetchVersionAnalytics() async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/api/version/analytics'))
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        return data['analytics'] ?? {};
+      }
+    } catch (_) {}
+    return {};
+  }
 }
+

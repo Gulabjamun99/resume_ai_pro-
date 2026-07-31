@@ -1391,3 +1391,167 @@ async def download_doc(req: DownloadRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Modules 5–10 REST API Endpoints & Request Models ───────
+
+class CognitivePlanRequest(BaseModel):
+    user_prompt: str
+    resume_data: dict
+    candidate_goal: Optional[str] = ""
+
+class DifferentialPatchRequest(BaseModel):
+    edit_plan: dict
+    original_resume: dict
+    parent_version: Optional[int] = 0
+
+class GuardianValidateRequest(BaseModel):
+    original_data: dict
+    patch_result: dict
+
+class HealthReportRequest(BaseModel):
+    resume_data: dict
+    resume_version: Optional[int] = 0
+
+class RenderDocumentRequest(BaseModel):
+    resume_data: dict
+    design_spec: Optional[dict] = None
+    template_name: Optional[str] = "Executive"
+    resume_version: Optional[int] = 0
+
+class VersionCommitRequest(BaseModel):
+    resume_data: dict
+    patch_result: dict
+    guardian_result: dict
+    health_report: dict
+    render_fingerprint: str
+    trigger_prompt: Optional[str] = "AI Edit"
+    author: Optional[str] = "AI Assistant"
+
+class VersionDiffRequest(BaseModel):
+    version_a_index: int
+    version_b_index: int
+
+class VersionRollbackRequest(BaseModel):
+    target_version_index: int
+
+class VersionPreviewRequest(BaseModel):
+    version_index: int
+
+
+@app.post("/api/cognitive-plan")
+async def cognitive_plan(req: CognitivePlanRequest):
+    try:
+        plan = ai_provider.plan_cognitive_edit(req.user_prompt, req.resume_data, req.candidate_goal)
+        return JSONResponse(content={"success": True, "plan": plan})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/differential-patch")
+async def differential_patch(req: DifferentialPatchRequest):
+    try:
+        patch = ai_provider.generate_differential_patch(req.edit_plan, req.original_resume, req.parent_version)
+        return JSONResponse(content={"success": True, "patch": patch})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/guardian-validate")
+async def guardian_validate(req: GuardianValidateRequest):
+    try:
+        res = ai_provider.validate_resume_patch(req.original_data, req.patch_result)
+        return JSONResponse(content={"success": True, "validation": res})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/health-report")
+async def health_report(req: HealthReportRequest):
+    try:
+        report = ai_provider.calculate_multi_dimensional_health(req.resume_data, req.resume_version)
+        return JSONResponse(content={"success": True, "health_report": report})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/render-document")
+async def render_document(req: RenderDocumentRequest):
+    try:
+        report = ai_provider.render_resume_document(req.resume_data, req.design_spec, req.template_name, req.resume_version)
+        return JSONResponse(content={"success": True, "render_report": report})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/version/commit")
+async def version_commit(req: VersionCommitRequest):
+    try:
+        commit = ai_provider.commit_version(
+            resume_data=req.resume_data,
+            patch_result=req.patch_result,
+            guardian_result=req.guardian_result,
+            health_report=req.health_report,
+            render_fingerprint=req.render_fingerprint,
+            trigger_prompt=req.trigger_prompt,
+            author=req.author
+        )
+        return JSONResponse(content={"success": True, "commit": commit})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/version/list")
+async def version_list():
+    try:
+        vers = ai_provider._load_all_versions()
+        return JSONResponse(content={"success": True, "versions": vers, "total": len(vers)})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/version/diff")
+async def version_diff(req: VersionDiffRequest):
+    try:
+        diff = ai_provider.diff_versions(req.version_a_index, req.version_b_index)
+        return JSONResponse(content={"success": True, "diff": diff})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/version/rollback")
+async def version_rollback(req: VersionRollbackRequest):
+    try:
+        commit = ai_provider.rollback_to_version(req.target_version_index)
+        return JSONResponse(content={"success": True, "commit": commit})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/version/preview")
+async def version_preview(req: VersionPreviewRequest):
+    try:
+        preview = ai_provider.time_travel_preview(req.version_index)
+        return JSONResponse(content={"success": True, "preview": preview})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/version/analytics")
+async def version_analytics():
+    try:
+        analytics = ai_provider.generate_version_analytics()
+        return JSONResponse(content={"success": True, "analytics": analytics})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/version/export")
+async def version_export():
+    try:
+        exported = ai_provider.export_version_repository()
+        return JSONResponse(content={"success": True, "export": exported})
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+

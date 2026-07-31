@@ -27,6 +27,9 @@ Honest tradeoff to know about the free Gemini tier:
 import os
 import json
 import re
+import sqlite3
+import hashlib
+import time
 from datetime import datetime
 
 PROVIDER = os.environ.get("AI_PROVIDER", "gemini").lower()
@@ -1101,13 +1104,87 @@ def generate_health_scores(resume_data: dict) -> dict:
     }
 
 
-# ── 10. Multi-Version History, Diff & Time-Travel Engine ─
+# ── 10. Multi-Version History, Diff & Time-Travel Engine (SQLite Persisted) ─
 
-# In-memory immutable version repository
-_version_repository: list = []
+DB_FILE = os.path.join(os.path.dirname(__file__), "db.sqlite3")
+
+def _get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_version_db():
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS version_commits (
+        version_index INTEGER PRIMARY KEY,
+        version_id TEXT NOT NULL,
+        parent_version_index INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        author TEXT NOT NULL,
+        trigger_prompt TEXT NOT NULL,
+        commit_message TEXT NOT NULL,
+        patch_id TEXT NOT NULL,
+        guardian_validation_id TEXT NOT NULL,
+        guardian_signature TEXT NOT NULL,
+        render_fingerprint TEXT NOT NULL,
+        health_report_id TEXT NOT NULL,
+        ats_score REAL NOT NULL,
+        recruiter_score REAL NOT NULL,
+        overall_health_score REAL NOT NULL,
+        differential_snapshot TEXT NOT NULL,
+        full_resume_snapshot TEXT NOT NULL,
+        audit_trail TEXT NOT NULL
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+# Auto-initialize version table on module load
+init_version_db()
+
+def _load_all_versions() -> list:
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM version_commits ORDER BY version_index ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        result.append({
+            "version_id": r["version_id"],
+            "version_index": r["version_index"],
+            "parent_version_index": r["parent_version_index"],
+            "timestamp": r["timestamp"],
+            "author": r["author"],
+            "trigger_prompt": r["trigger_prompt"],
+            "commit_message": r["commit_message"],
+            "patch_id": r["patch_id"],
+            "guardian_validation_id": r["guardian_validation_id"],
+            "guardian_signature": r["guardian_signature"],
+            "render_fingerprint": r["render_fingerprint"],
+            "health_report_id": r["health_report_id"],
+            "ats_score": r["ats_score"],
+            "recruiter_score": r["recruiter_score"],
+            "overall_health_score": r["overall_health_score"],
+            "differential_snapshot": json.loads(r["differential_snapshot"]),
+            "full_resume_snapshot": json.loads(r["full_resume_snapshot"]),
+            "audit_trail": json.loads(r["audit_trail"])
+        })
+    return result
+
+@property
+def _version_repository():
+    return _load_all_versions()
 
 def _next_version_index() -> int:
-    return len(_version_repository)
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as count FROM version_commits")
+    row = cursor.fetchone()
+    conn.close()
+    return row["count"] if row else 0
 
 
 def commit_version(
@@ -1121,10 +1198,11 @@ def commit_version(
 ) -> dict:
     """
     Module 10 Version Commit Engine.
-    Creates an immutable version snapshot from a Guardian-certified patch.
+    Creates an immutable version snapshot from a Guardian-certified patch and persists it to SQLite db.sqlite3.
     Stores differential changes only; untouched sections inherited from parent.
     """
-    idx = _next_version_index()
+    all_vers = _load_all_versions()
+    idx = len(all_vers)
     parent_idx = idx - 1 if idx > 0 else 0
     version_id = f"v{idx + 1}"
 
@@ -1137,8 +1215,8 @@ def commit_version(
         before_snapshot[section] = patch_result.get("before_snapshot", {}).get(section, {})
 
     # Full snapshot reconstruction
-    if _version_repository:
-        full_snap = dict(_version_repository[-1]["full_resume_snapshot"])
+    if all_vers:
+        full_snap = dict(all_vers[-1]["full_resume_snapshot"])
     else:
         full_snap = dict(resume_data)
     for section in affected:
@@ -1146,6 +1224,25 @@ def commit_version(
 
     # Auto-generate commit message
     commit_msg = _generate_commit_message(trigger_prompt, affected)
+
+    diff_dict = {
+        "affected_sections": affected,
+        "before": before_snapshot,
+        "after": diff_snapshot,
+        "patch_operations": patch_result.get("operations", patch_result.get("patch_operations", [])),
+        "audit_reason": trigger_prompt
+    }
+
+    audit_dict = {
+        "user_prompt": trigger_prompt,
+        "detected_intent": patch_result.get("intent", "edit"),
+        "generated_plan": patch_result.get("plan_summary", ""),
+        "generated_patch": patch_result.get("patch_id", ""),
+        "guardian_result": guardian_result.get("guardian_status", guardian_result.get("overall_decision", "APPROVED")),
+        "health_report_id": health_report.get("report_id", ""),
+        "rendering_fingerprint": render_fingerprint,
+        "version_committed": version_id
+    }
 
     commit = {
         "version_id": version_id,
@@ -1160,30 +1257,34 @@ def commit_version(
         "guardian_signature": guardian_result.get("guardian_signature", ""),
         "render_fingerprint": render_fingerprint,
         "health_report_id": health_report.get("report_id", f"health_{idx}"),
-        "ats_score": health_report.get("ats_score", 90.0),
-        "recruiter_score": health_report.get("recruiter_impact_score", 9.0),
+        "ats_score": health_report.get("ats_score", health_report.get("ats_compatibility_score", 90.0)),
+        "recruiter_score": health_report.get("recruiter_score", health_report.get("recruiter_impact_score", 9.0)),
         "overall_health_score": health_report.get("overall_health_score", 90.0),
-        "differential_snapshot": {
-            "affected_sections": affected,
-            "before": before_snapshot,
-            "after": diff_snapshot,
-            "patch_operations": patch_result.get("operations", []),
-            "audit_reason": trigger_prompt
-        },
+        "differential_snapshot": diff_dict,
         "full_resume_snapshot": full_snap,
-        "audit_trail": {
-            "user_prompt": trigger_prompt,
-            "detected_intent": patch_result.get("intent", "edit"),
-            "generated_plan": patch_result.get("plan_summary", ""),
-            "generated_patch": patch_result.get("patch_id", ""),
-            "guardian_result": guardian_result.get("overall_decision", "APPROVED"),
-            "health_report_id": health_report.get("report_id", ""),
-            "rendering_fingerprint": render_fingerprint,
-            "version_committed": version_id
-        }
+        "audit_trail": audit_dict
     }
 
-    _version_repository.append(commit)
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO version_commits (
+        version_index, version_id, parent_version_index, timestamp, author,
+        trigger_prompt, commit_message, patch_id, guardian_validation_id,
+        guardian_signature, render_fingerprint, health_report_id, ats_score,
+        recruiter_score, overall_health_score, differential_snapshot,
+        full_resume_snapshot, audit_trail
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        idx, version_id, parent_idx, commit["timestamp"], author,
+        trigger_prompt, commit_msg, commit["patch_id"], commit["guardian_validation_id"],
+        commit["guardian_signature"], render_fingerprint, commit["health_report_id"],
+        commit["ats_score"], commit["recruiter_score"], commit["overall_health_score"],
+        json.dumps(diff_dict), json.dumps(full_snap), json.dumps(audit_dict)
+    ))
+    conn.commit()
+    conn.close()
+
     return commit
 
 
@@ -1191,7 +1292,7 @@ def _generate_commit_message(trigger: str, affected: list) -> str:
     """Auto-generate meaningful recruiter-friendly commit messages."""
     t = trigger.lower()
     if "rollback" in t:
-        return f"Rolled back resume state to a previous version."
+        return "Rolled back resume state to a previous version."
     if "summary" in t:
         return "Updated Executive Summary for enhanced recruiter positioning."
     if "skill" in t or "aws" in t or "python" in t:
@@ -1210,23 +1311,25 @@ def _generate_commit_message(trigger: str, affected: list) -> str:
 def reconstruct_snapshot(target_version_index: int) -> dict:
     """
     Snapshot Reconstruction Engine.
-    Deterministically reconstructs full resume at any version by replaying patches.
+    Deterministically reconstructs full resume at any version by replaying patches from SQLite.
     """
-    if target_version_index < 0 or target_version_index >= len(_version_repository):
+    all_vers = _load_all_versions()
+    if target_version_index < 0 or target_version_index >= len(all_vers):
         return {"error": "Version not found"}
-    return dict(_version_repository[target_version_index]["full_resume_snapshot"])
+    return dict(all_vers[target_version_index]["full_resume_snapshot"])
 
 
 def diff_versions(version_a_index: int, version_b_index: int) -> dict:
     """
     Resume Diff Engine.
-    Generates recruiter-friendly visual comparison between any two versions.
+    Generates recruiter-friendly visual comparison between any two versions in SQLite.
     """
-    if version_a_index >= len(_version_repository) or version_b_index >= len(_version_repository):
+    all_vers = _load_all_versions()
+    if version_a_index < 0 or version_a_index >= len(all_vers) or version_b_index < 0 or version_b_index >= len(all_vers):
         return {"error": "Version not found"}
 
-    ca = _version_repository[version_a_index]
-    cb = _version_repository[version_b_index]
+    ca = all_vers[version_a_index]
+    cb = all_vers[version_b_index]
 
     snap_a = ca["full_resume_snapshot"]
     snap_b = cb["full_resume_snapshot"]
@@ -1268,15 +1371,35 @@ def diff_versions(version_a_index: int, version_b_index: int) -> dict:
 def rollback_to_version(target_version_index: int) -> dict:
     """
     Non-Destructive Rollback Engine.
-    Creates a NEW version whose content matches the target version.
+    Creates a NEW version in SQLite whose content matches the target version.
     History is NEVER deleted. V2, V3 remain intact.
     """
-    if target_version_index < 0 or target_version_index >= len(_version_repository):
+    all_vers = _load_all_versions()
+    if target_version_index < 0 or target_version_index >= len(all_vers):
         return {"error": "Version not found"}
 
-    target = _version_repository[target_version_index]
-    idx = _next_version_index()
+    target = all_vers[target_version_index]
+    idx = len(all_vers)
     version_id = f"v{idx + 1}"
+
+    diff_dict = {
+        "affected_sections": ["rollback"],
+        "before": all_vers[-1]["full_resume_snapshot"] if all_vers else {},
+        "after": target["full_resume_snapshot"],
+        "patch_operations": [{"type": "ROLLBACK", "target_version": target["version_id"]}],
+        "audit_reason": f"User requested rollback to {target['version_id']}"
+    }
+
+    audit_dict = {
+        "user_prompt": f"Rollback to {target['version_id']}",
+        "detected_intent": "rollback",
+        "generated_plan": f"Restore full snapshot from {target['version_id']}",
+        "generated_patch": f"rollback_{idx}",
+        "guardian_result": "APPROVED (rollback bypass)",
+        "health_report_id": target.get("health_report_id", ""),
+        "rendering_fingerprint": target.get("render_fingerprint", ""),
+        "version_committed": version_id
+    }
 
     rollback_commit = {
         "version_id": version_id,
@@ -1294,39 +1417,46 @@ def rollback_to_version(target_version_index: int) -> dict:
         "ats_score": target.get("ats_score", 0),
         "recruiter_score": target.get("recruiter_score", 0),
         "overall_health_score": target.get("overall_health_score", 0),
-        "differential_snapshot": {
-            "affected_sections": ["rollback"],
-            "before": _version_repository[-1]["full_resume_snapshot"] if _version_repository else {},
-            "after": target["full_resume_snapshot"],
-            "patch_operations": [{"type": "ROLLBACK", "target_version": target["version_id"]}],
-            "audit_reason": f"User requested rollback to {target['version_id']}"
-        },
+        "differential_snapshot": diff_dict,
         "full_resume_snapshot": dict(target["full_resume_snapshot"]),
-        "audit_trail": {
-            "user_prompt": f"Rollback to {target['version_id']}",
-            "detected_intent": "rollback",
-            "generated_plan": f"Restore full snapshot from {target['version_id']}",
-            "generated_patch": f"rollback_{idx}",
-            "guardian_result": "APPROVED (rollback bypass)",
-            "health_report_id": target.get("health_report_id", ""),
-            "rendering_fingerprint": target.get("render_fingerprint", ""),
-            "version_committed": version_id
-        }
+        "audit_trail": audit_dict
     }
 
-    _version_repository.append(rollback_commit)
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO version_commits (
+        version_index, version_id, parent_version_index, timestamp, author,
+        trigger_prompt, commit_message, patch_id, guardian_validation_id,
+        guardian_signature, render_fingerprint, health_report_id, ats_score,
+        recruiter_score, overall_health_score, differential_snapshot,
+        full_resume_snapshot, audit_trail
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        idx, version_id, idx - 1, rollback_commit["timestamp"], "User",
+        rollback_commit["trigger_prompt"], rollback_commit["commit_message"],
+        rollback_commit["patch_id"], rollback_commit["guardian_validation_id"],
+        rollback_commit["guardian_signature"], rollback_commit["render_fingerprint"],
+        rollback_commit["health_report_id"], rollback_commit["ats_score"],
+        rollback_commit["recruiter_score"], rollback_commit["overall_health_score"],
+        json.dumps(diff_dict), json.dumps(target["full_resume_snapshot"]), json.dumps(audit_dict)
+    ))
+    conn.commit()
+    conn.close()
+
     return rollback_commit
 
 
 def time_travel_preview(version_index: int) -> dict:
     """
     Time-Travel Read-Only Preview Engine.
-    Returns a read-only snapshot of any version without modifying current workspace.
+    Returns a read-only snapshot of any version from SQLite without modifying current workspace.
     """
-    if version_index < 0 or version_index >= len(_version_repository):
+    all_vers = _load_all_versions()
+    if version_index < 0 or version_index >= len(all_vers):
         return {"error": "Version not found"}
 
-    v = _version_repository[version_index]
+    v = all_vers[version_index]
     return {
         "preview_mode": True,
         "read_only": True,
@@ -1347,17 +1477,18 @@ def time_travel_preview(version_index: int) -> dict:
 def generate_version_analytics() -> dict:
     """
     Version Analytics Engine.
-    Produces aggregate statistics across entire version history.
+    Produces aggregate statistics across entire version history stored in SQLite.
     """
-    if not _version_repository:
+    all_vers = _load_all_versions()
+    if not all_vers:
         return {"total_versions": 0}
 
-    ats_scores = [v["ats_score"] for v in _version_repository]
-    recruiter_scores = [v["recruiter_score"] for v in _version_repository]
-    health_scores = [v["overall_health_score"] for v in _version_repository]
+    ats_scores = [v["ats_score"] for v in all_vers]
+    recruiter_scores = [v["recruiter_score"] for v in all_vers]
+    health_scores = [v["overall_health_score"] for v in all_vers]
 
     section_counts: dict = {}
-    for v in _version_repository:
+    for v in all_vers:
         for s in v.get("differential_snapshot", {}).get("affected_sections", []):
             section_counts[s] = section_counts.get(s, 0) + 1
     most_modified = max(section_counts, key=section_counts.get) if section_counts else "N/A"
@@ -1365,26 +1496,27 @@ def generate_version_analytics() -> dict:
     avg_ats_improvement = round((ats_scores[-1] - ats_scores[0]) / max(len(ats_scores) - 1, 1), 2) if len(ats_scores) > 1 else 0
 
     return {
-        "total_versions": len(_version_repository),
-        "total_edits": len(_version_repository) - 1,
+        "total_versions": len(all_vers),
+        "total_edits": len(all_vers) - 1,
         "most_modified_section": most_modified,
         "average_ats_improvement_per_edit": avg_ats_improvement,
         "ats_score_trend": ats_scores,
         "recruiter_score_trend": recruiter_scores,
         "health_trend": health_scores,
-        "timeline": [{"version": v["version_id"], "timestamp": v["timestamp"], "commit": v["commit_message"]} for v in _version_repository]
+        "timeline": [{"version": v["version_id"], "timestamp": v["timestamp"], "commit": v["commit_message"]} for v in all_vers]
     }
 
 
 def export_version_repository() -> dict:
     """
-    Export complete version history as JSON.
+    Export complete version history as JSON from SQLite.
     Includes all versions, metadata, patches, audit trail, timestamps.
     """
+    all_vers = _load_all_versions()
     return {
         "export_id": f"export_{int(time.time() * 1000)}",
-        "total_versions": len(_version_repository),
-        "versions": [dict(v) for v in _version_repository],
+        "total_versions": len(all_vers),
+        "versions": [dict(v) for v in all_vers],
         "exported_at": datetime.now().isoformat()
     }
 
@@ -1414,5 +1546,9 @@ def verify_deterministic_restore(version_index: int) -> dict:
 
 
 def reset_version_repository():
-    """Reset repository for testing purposes only."""
-    _version_repository.clear()
+    """Reset SQLite version repository table for testing purposes only."""
+    conn = _get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM version_commits")
+    conn.commit()
+    conn.close()

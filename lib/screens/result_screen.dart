@@ -106,7 +106,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _currentVersionIndex = 0;
     _activeTemplateId = widget.templateId;
     _activeTemplateColor = widget.templateColor;
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
 
     _messages.add(_ChatMsg(
       isAI: true,
@@ -115,7 +115,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
     _loadInitialAnalysis();
     _loadUserPreferences();
+    _fetchServerVersions();
   }
+
 
   @override
   void dispose() {
@@ -794,6 +796,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '📊 ATS Audit'),
             Tab(icon: Icon(Icons.assignment_ind_outlined, size: 18), text: '👔 Recruiter Review'),
             Tab(icon: Icon(Icons.center_focus_strong, size: 18), text: '🎯 JD Matcher'),
+            Tab(icon: Icon(Icons.history, size: 18), text: '📜 Version Control'),
           ],
         ),
       ),
@@ -814,8 +817,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
           // Tab 5: JD Matcher
           _buildJDMatcherTab(),
+
+          // Tab 6: Version Control (Module 10)
+          _buildVersionControlTab(),
         ],
       ),
+
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(12),
         decoration: const BoxDecoration(
@@ -1309,7 +1316,291 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       ),
     );
   }
+
+  List<dynamic> _serverVersions = [];
+  bool _isLoadingVersions = false;
+  Map<String, dynamic>? _selectedDiff;
+  bool _isTimeTravelMode = false;
+  int? _previewingVersionIndex;
+
+  Future<void> _fetchServerVersions() async {
+    setState(() => _isLoadingVersions = true);
+    final vers = await ApiService.fetchVersionList();
+    if (mounted) {
+      setState(() {
+        _serverVersions = vers;
+        _isLoadingVersions = false;
+      });
+    }
+  }
+
+  Future<void> _handleServerRollback(int index) async {
+    try {
+      final res = await ApiService.rollbackVersion(index);
+      if (res['full_resume_snapshot'] != null) {
+        setState(() {
+          _resume = ResumeData.fromJson(res['full_resume_snapshot']);
+          _isTimeTravelMode = false;
+          _previewingVersionIndex = null;
+        });
+        await _fetchServerVersions();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⏪ Rolled back state to match ${res['version_id']}!'),
+              backgroundColor: const Color(0xFF10B981),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rollback failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleTimeTravelPreview(int index) async {
+    final prev = await ApiService.previewVersion(index);
+    if (prev['full_resume_snapshot'] != null) {
+      setState(() {
+        _resume = ResumeData.fromJson(prev['full_resume_snapshot']);
+        _isTimeTravelMode = true;
+        _previewingVersionIndex = index;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('👁 Time Travel Previewing Version ${prev['version_id']} (Read-Only)'),
+            backgroundColor: Colors.amber[800],
+          ),
+        );
+      }
+    }
+  }
+
+  void _exitTimeTravel() {
+    if (_serverVersions.isNotEmpty) {
+      final latest = _serverVersions.last['full_resume_snapshot'];
+      if (latest != null) {
+        setState(() {
+          _resume = ResumeData.fromJson(latest);
+          _isTimeTravelMode = false;
+          _previewingVersionIndex = null;
+        });
+      }
+    } else {
+      setState(() {
+        _isTimeTravelMode = false;
+        _previewingVersionIndex = null;
+      });
+    }
+  }
+
+  Future<void> _handleDiffVersions(int indexA, int indexB) async {
+    final diff = await ApiService.diffVersions(indexA, indexB);
+    setState(() => _selectedDiff = diff);
+  }
+
+  Widget _buildVersionControlTab() {
+    return RefreshIndicator(
+      onRefresh: _fetchServerVersions,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_isTimeTravelMode) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber[900]?.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_toggle_off, color: Colors.amber, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Time Travel Mode Active: Previewing Version v${(_previewingVersionIndex ?? 0) + 1} (Read-Only)',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _exitTimeTravel,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[800]),
+                      child: const Text('Exit Preview', style: TextStyle(color: Colors.white, fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('📜 Version History & Time-Travel', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('SQLite Persisted • Non-Destructive Rollbacks', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: AppColors.accent),
+                  onPressed: _fetchServerVersions,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (_isLoadingVersions)
+              const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+            else if (_serverVersions.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161922),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Text(
+                    'No versions recorded in database yet.\nMake an edit in Live Assistant to create Version v1!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _serverVersions.length,
+                itemBuilder: (context, index) {
+                  final v = _serverVersions[index];
+                  final vId = (v['version_id'] ?? 'v${index + 1}').toString();
+                  final msg = (v['commit_message'] ?? 'Applied edit').toString();
+                  final ats = (v['ats_score'] ?? 88.0).toString();
+                  final author = (v['author'] ?? 'AI').toString();
+                  final isCurrent = index == _serverVersions.length - 1 && !_isTimeTravelMode;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isCurrent ? AppColors.accent.withValues(alpha: 0.12) : const Color(0xFF161922),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isCurrent ? AppColors.accent : Colors.white12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isCurrent ? AppColors.accent : Colors.white24,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(vId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                                const SizedBox(width: 8),
+                                Text('by $author', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('ATS $ats', style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(msg, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (index > 0)
+                              TextButton.icon(
+                                onPressed: () => _handleDiffVersions(0, index),
+                                icon: const Icon(Icons.compare_arrows, size: 14, color: AppColors.accent),
+                                label: const Text('Diff vs v1', style: TextStyle(color: AppColors.accent, fontSize: 11)),
+                              ),
+                            const SizedBox(width: 6),
+                            TextButton.icon(
+                              onPressed: () => _handleTimeTravelPreview(index),
+                              icon: const Icon(Icons.visibility_outlined, size: 14, color: Colors.amber),
+                              label: const Text('Preview', style: TextStyle(color: Colors.amber, fontSize: 11)),
+                            ),
+                            const SizedBox(width: 6),
+                            ElevatedButton.icon(
+                              onPressed: () => _handleServerRollback(index),
+                              icon: const Icon(Icons.undo, size: 14, color: Colors.white),
+                              label: const Text('Rollback', style: TextStyle(color: Colors.white, fontSize: 11)),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+            if (_selectedDiff != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161922),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.accent),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Visual Diff: ${_selectedDiff!['version_a']} ➔ ${_selectedDiff!['version_b']}',
+                          style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                          onPressed: () => setState(() => _selectedDiff = null),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_selectedDiff!['recruiter_explanation'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 12.5)),
+                    const SizedBox(height: 10),
+                    Text('Modified Sections: ${(_selectedDiff!['modified_sections'] ?? []).join(', ')}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
+
 
 class _ChatMsg {
   final bool isAI;
