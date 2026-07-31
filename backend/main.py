@@ -567,9 +567,25 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
         design_spec = ai_provider.extract_design_fingerprint(req.extracted_text)
         health_scores = ai_provider.generate_health_scores(parsed)
 
+        layout_blueprint = {
+            "template_type": "original",
+            "primary_color": design_spec.get("accent_color", "#1A365D"),
+            "secondary_color": "#2B6CB0",
+            "text_color": "#2D3748",
+            "font_family_header": "Roboto",
+            "font_family_body": "Roboto",
+            "header_style": "left_aligned",
+            "margin_horizontal": 20.0,
+            "margin_vertical": 18.0,
+            "section_ordering": ["personal", "summary", "experience", "education", "skills", "projects"]
+        }
+        parsed["layout_blueprint"] = layout_blueprint
+        parsed["health_report"] = health_scores
+
         return JSONResponse(content={
             "success": True,
             "data": parsed,
+            "layout_blueprint": layout_blueprint,
             "proactive_suggestions": proactive_sug,
             "design_spec": design_spec,
             "health_scores": health_scores

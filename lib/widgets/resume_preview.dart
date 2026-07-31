@@ -49,6 +49,9 @@ class ResumePreview extends StatelessWidget {
 
     Widget layout;
     switch (templateId) {
+      case 'original':
+        layout = _OriginalBlueprintLayout(ctx: ctx, bp: data.layoutBlueprint);
+        break;
       case 'cascade':
         layout = _CascadeLayout(ctx: ctx);
         break;
@@ -672,5 +675,214 @@ class _CompactLayout extends StatelessWidget {
       Container(height: 1.5, color: ctx.accent),
       _sectionsBody(ctx),
     ]));
+  }
+}
+
+// ── 8. Reconstructed Layout Blueprint (Module 3 Preservation) ──
+class _OriginalBlueprintLayout extends StatelessWidget {
+  final _ResumeContext ctx;
+  final LayoutBlueprint bp;
+  const _OriginalBlueprintLayout({required this.ctx, required this.bp});
+
+  Color _parseColor(String hex, Color fallback) {
+    try {
+      final h = hex.replaceAll('#', '');
+      return Color(int.parse('FF$h', radix: 16));
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = _parseColor(bp.primaryColorHex, ctx.accent);
+    final secondary = _parseColor(bp.secondaryColorHex, ctx.accent.withValues(alpha: 0.8));
+    final textColor = _parseColor(bp.textColorHex, const Color(0xFF2D3748));
+
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: bp.marginHorizontalPx,
+        vertical: bp.marginVerticalPx,
+      ),
+      child: Column(
+        crossAxisAlignment: bp.alignment == 'center'
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: [
+          // Reconstructed Header
+          Container(
+            padding: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: primary, width: 2)),
+            ),
+            child: Column(
+              crossAxisAlignment: bp.alignment == 'center'
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ctx.name,
+                  style: TextStyle(
+                    fontSize: bp.fontSizeHeaderPt + 4,
+                    fontWeight: FontWeight.w900,
+                    color: primary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                if (ctx.role.isNotEmpty)
+                  Text(
+                    ctx.role.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: bp.fontSizeBodyPt + 1,
+                      fontWeight: FontWeight.w700,
+                      color: secondary,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  alignment: bp.alignment == 'center'
+                      ? WrapAlignment.center
+                      : WrapAlignment.start,
+                  children: ctx.contacts
+                      .map((c) => Text(
+                            '${c['icon']} ${c['val']}',
+                            style: TextStyle(fontSize: bp.fontSizeBodyPt - 0.5, color: textColor),
+                          ))
+                      .toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Sections body adhering to LayoutBlueprint ordering
+          ...bp.sectionOrdering.map((sectionKey) {
+            switch (sectionKey) {
+              case 'summary':
+                if (ctx.summary.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _heading('PROFESSIONAL SUMMARY', primary),
+                    Text(
+                      ctx.summary,
+                      style: TextStyle(fontSize: bp.fontSizeBodyPt, color: textColor, height: 1.45),
+                    ),
+                  ],
+                );
+              case 'experience':
+                if (ctx.exp.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _heading('WORK EXPERIENCE', primary),
+                    ...ctx.exp.map((w) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${w['co'] ?? ''} — ${w['des'] ?? ''}',
+                                      style: TextStyle(
+                                        fontSize: bp.fontSizeBodyPt + 0.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: primary,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${w['start'] ?? ''} – ${w['end'] ?? ''}',
+                                    style: TextStyle(fontSize: bp.fontSizeBodyPt - 1, color: secondary),
+                                  ),
+                                ],
+                              ),
+                              if ((w['pts'] ?? '').toString().isNotEmpty)
+                                ...w['pts'].toString().split('\n').where((p) => p.trim().isNotEmpty).map(
+                                      (pt) => Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          '• ${pt.replaceAll(RegExp(r'^[•\-\*]\s*'), '')}',
+                                          style: TextStyle(fontSize: bp.fontSizeBodyPt - 0.5, color: textColor, height: 1.4),
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        )),
+                  ],
+                );
+              case 'skills':
+                if (ctx.tech.isEmpty && ctx.soft.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _heading('CORE COMPETENCIES & SKILLS', primary),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: ctx.tech
+                          .map((s) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: primary.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  s,
+                                  style: TextStyle(
+                                    fontSize: bp.fontSizeBodyPt - 1,
+                                    fontWeight: FontWeight.w600,
+                                    color: primary,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ],
+                );
+              case 'education':
+                if (ctx.edus.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _heading('EDUCATION', primary),
+                    ...ctx.edus.map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${e['deg'] ?? ''} | ${e['col'] ?? ''}',
+                                style: TextStyle(
+                                  fontSize: bp.fontSizeBodyPt,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              Text(
+                                '${e['yr'] ?? ''}',
+                                style: TextStyle(fontSize: bp.fontSizeBodyPt - 1, color: secondary),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                );
+              default:
+                return const SizedBox.shrink();
+            }
+          }),
+        ],
+      ),
+    );
   }
 }

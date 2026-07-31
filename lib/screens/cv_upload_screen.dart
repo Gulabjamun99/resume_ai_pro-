@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../services/api_service.dart';
 import 'form_screen.dart';
 import 'building_screen.dart';
+import 'design_choice_screen.dart';
 
 class CVUploadScreen extends StatefulWidget {
   final bool startInPasteMode;
@@ -92,9 +93,7 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => BuildingScreen(
-          plan: widget.jobDescription.isNotEmpty ? 'jd_tailored' : 'junior',
-          isAutoBuildFromCV: true,
+        builder: (_) => DesignChoiceScreen(
           extractedText: _extractedText,
           additionalInfo: _newInfoCtrl.text.trim(),
           jobDescription: widget.jobDescription,
