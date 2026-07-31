@@ -248,11 +248,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
           SizedBox(
             width: double.infinity,
+            height: 52,
             child: ElevatedButton(
               onPressed: _isVerifying ? null : _verifyAndProceed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                elevation: 4,
+                shadowColor: AppColors.accent.withOpacity(0.4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
               child: _isVerifying
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Text('✅ Verify & Generate Resume'),
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black))
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Verify UTR & Build Resume', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15)),
+                        SizedBox(width: 6),
+                        Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 18),
+                      ],
+                    ),
             ),
           ),
           const SizedBox(height: 30),
