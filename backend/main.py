@@ -1,10 +1,18 @@
-import os, json, re, io, traceback, sqlite3, httpx
-from fastapi import FastAPI, HTTPException, UploadFile, File
+import os, json, re, io, traceback, sqlite3, httpx, logging, secrets, time
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 import ai_provider
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("resume_ai")
 
 app = FastAPI(title="ResumeAI Pro Backend")
 
@@ -16,6 +24,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Rate Limiting & Audit Logging Middleware ─────────────
+_rate_limit_store = {}
+RATE_LIMIT_MAX = 60
+RATE_LIMIT_WINDOW = 60
+
+@app.middleware("http")
+async def rate_limit_and_logging_middleware(request: Request, call_next):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+    
+    timestamps = _rate_limit_store.get(client_ip, [])
+    timestamps = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+    
+    if len(timestamps) >= RATE_LIMIT_MAX and not request.url.path.startswith("/health"):
+        logger.warning(f"Rate limit exceeded for IP: {client_ip} on path {request.url.path}")
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Maximum 60 requests per minute allowed."}
+        )
+    
+    timestamps.append(now)
+    _rate_limit_store[client_ip] = timestamps
+    
+    t0 = time.time()
+    response = await call_next(request)
+    dt = round((time.time() - t0) * 1000, 2)
+    logger.info(f"{request.method} {request.url.path} -> Status {response.status_code} ({dt}ms) [IP: {client_ip}]")
+    return response
+
 # Read Supabase configuration from environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
@@ -24,9 +61,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 DB_FILE = os.path.join(os.path.dirname(__file__), "db.sqlite3")
 
 def init_db():
-    if SUPABASE_URL and SUPABASE_KEY:
-        print("Using Supabase cloud database.")
-        return
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("""
@@ -37,10 +71,19 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_sessions (
+        session_token TEXT PRIMARY KEY,
+        user_email TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
     conn.commit()
     conn.close()
 
 init_db()
+
 
 # AI provider (Gemini / Claude / Groq) is configured via ai_provider.py
 # and the AI_PROVIDER environment variable — see that file for details.
@@ -1554,4 +1597,38 @@ async def version_export():
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Milestone 2 Session Authentication & Security Endpoints ──
+
+class SessionCreateRequest(BaseModel):
+    user_email: str
+
+@app.post("/api/auth/session")
+async def create_session(req: SessionCreateRequest):
+    email = req.user_email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    token = f"sess_{secrets.token_hex(16)}"
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO user_sessions (session_token, user_email) VALUES (?, ?)", (token, email))
+    conn.commit()
+    conn.close()
+    return JSONResponse(content={"success": True, "session_token": token, "user_email": email})
+
+@app.get("/api/auth/verify")
+async def verify_session(authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization Header")
+    token = authorization.replace("Bearer ", "").strip()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_token, user_email, created_at FROM user_sessions WHERE session_token = ?", (token,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid or expired session token")
+    return JSONResponse(content={"valid": True, "session_token": row[0], "user_email": row[1]})
+
 

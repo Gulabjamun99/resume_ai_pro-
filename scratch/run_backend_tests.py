@@ -13,10 +13,15 @@ from test_pipeline import (
     test_version_lifecycle_and_sqlite_persistence,
     setup_function
 )
+from test_milestone2 import (
+    test_session_auth_lifecycle,
+    test_rate_limiting_enforcement,
+    test_concurrent_api_requests
+)
 
 def run():
     print("=" * 80)
-    print("MILESTONE 1 BACKEND TEST SUITE")
+    print("MILESTONE 1 & 2 PRODUCTION HARDENING BACKEND TEST SUITE")
     print("=" * 80)
 
     tests = [
@@ -26,8 +31,12 @@ def run():
         ("Guardian Validate Endpoint (/api/guardian-validate)", test_guardian_validate_endpoint),
         ("Health Report Endpoint (/api/health-report)", test_health_report_endpoint),
         ("Render Document Endpoint (/api/render-document)", test_render_document_endpoint),
-        ("Version Control Lifecycle & SQLite Persistence", test_version_lifecycle_and_sqlite_persistence)
+        ("Version Control Lifecycle & SQLite Persistence", test_version_lifecycle_and_sqlite_persistence),
+        ("Bearer Token Auth & Session Management", test_session_auth_lifecycle),
+        ("API Rate Limiting Enforcement (HTTP 429)", test_rate_limiting_enforcement),
+        ("Multi-Threaded Concurrency Handling", test_concurrent_api_requests)
     ]
+
 
     passed = 0
     failed = 0
