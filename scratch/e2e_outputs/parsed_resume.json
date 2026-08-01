@@ -1,0 +1,94 @@
+{
+  "personal": {
+    "name": "Gulab Jamun",
+    "phone": "+91 9876543210",
+    "email": "gulabjamun99@gmail.com",
+    "city": "Bengaluru, Karnataka, India",
+    "linkedin": "linkedin.com/in/gulabjamun99",
+    "github": "github.com/Gulabjamun99",
+    "role": "Senior Software Engineer & Tech Lead"
+  },
+  "summary": "Results-driven Senior Software Engineer and Technical Lead with 5+ years of experience architecting high-scalability mobile and web applications, designing RESTful APIs, and leading cross-functional engineering teams.",
+  "education": [
+    {
+      "deg": "Bachelor of Technology (B.Tech) in Computer Science",
+      "col": "National Institute of Technology",
+      "yr": "2015 \u2013 2019",
+      "grade": "",
+      "honors": ""
+    }
+  ],
+  "experience": [
+    {
+      "co": "Tech Solutions Pvt Ltd",
+      "des": "Senior Software Engineer",
+      "start": "Jan 2022",
+      "end": "March 2025",
+      "loc": "Bengaluru, India",
+      "bullets": [
+        "Architected enterprise mobile workspace application using Flutter, Dart, and Python FastAPI.",
+        "Built microservices backend deployed on Render and AWS ECS handling 300k monthly requests.",
+        "Spearheaded team of 6 engineers, implementing CI/CD pipelines and automated testing suites."
+      ]
+    },
+    {
+      "co": "Innovate Tech Labs",
+      "des": "Software Engineer",
+      "start": "Jun 2019",
+      "end": "Dec 2021",
+      "loc": "Hyderabad, India",
+      "bullets": [
+        "Developed core frontend components for cross-platform Android and iOS applications.",
+        "Optimized database indexing in PostgreSQL, reducing query latency by 40%."
+      ]
+    }
+  ],
+  "skills": {
+    "technical": [
+      "Flutter",
+      "Dart",
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "SQLite",
+      "Docker",
+      "Kubernetes",
+      "Git",
+      "REST APIs",
+      "System Design"
+    ],
+    "soft": [
+      "Team Leadership",
+      "Communication"
+    ],
+    "languages": [
+      "English"
+    ],
+    "certifications": []
+  },
+  "projects": [
+    {
+      "name": "ResumeAI Pro: Enterprise AI Resume Workspace featuring dynamic design preservation and 10-module intelligence.",
+      "tech": "",
+      "desc": ""
+    },
+    {
+      "name": "SmartScan AI: High-performance OCR document scanner app for Android and iOS.",
+      "tech": "",
+      "desc": ""
+    }
+  ],
+  "extra": [],
+  "ats_keywords": [
+    "Flutter",
+    "Dart",
+    "Python",
+    "FastAPI",
+    "PostgreSQL",
+    "SQLite",
+    "Docker",
+    "Kubernetes"
+  ],
+  "ats_score": 92,
+  "estimated_pages": 1
+}

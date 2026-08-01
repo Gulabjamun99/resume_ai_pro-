@@ -1,0 +1,166 @@
+{
+  "personal": {
+    "name": "Gulab Jamun",
+    "phone": "+91 9876543210",
+    "email": "gulabjamun99@gmail.com",
+    "city": "Bengaluru, Karnataka, India",
+    "linkedin": "linkedin.com/in/gulabjamun99",
+    "github": "github.com/Gulabjamun99",
+    "role": "Senior Software Engineer & Tech Lead"
+  },
+  "summary": "Results-driven Senior Software Engineer and Technical Lead with 5+ years of experience architecting high-scalability mobile and web applications, designing RESTful APIs, and leading cross-functional engineering teams.",
+  "education": [
+    {
+      "deg": "Bachelor of Technology (B.Tech) in Computer Science",
+      "col": "National Institute of Technology",
+      "yr": "2015 \u2013 2019",
+      "grade": "",
+      "honors": ""
+    }
+  ],
+  "experience": [
+    {
+      "co": "Independent Advisory & Consulting",
+      "des": "Independent Consultant",
+      "start": "April 2025",
+      "end": "Present",
+      "loc": "Remote",
+      "bullets": [
+        "Managed client requirements and led recruitment operations for tech engineering projects.",
+        "Architected and deployed multiple live AI projects using AI developer platforms (Antigravity, Claude, ChatGPT, Z.ai) over 1.5+ years."
+      ]
+    },
+    {
+      "co": "Tech Solutions Pvt Ltd",
+      "des": "Senior Software Engineer",
+      "start": "Jan 2022",
+      "end": "March 2025",
+      "loc": "Bengaluru, India",
+      "bullets": [
+        "Architected enterprise mobile workspace application using Flutter, Dart, and Python FastAPI.",
+        "Built microservices backend deployed on Render and AWS ECS handling 300k monthly requests.",
+        "Spearheaded team of 6 engineers, implementing CI/CD pipelines and automated testing suites."
+      ]
+    },
+    {
+      "co": "Innovate Tech Labs",
+      "des": "Software Engineer",
+      "start": "Jun 2019",
+      "end": "Dec 2021",
+      "loc": "Hyderabad, India",
+      "bullets": [
+        "Developed core frontend components for cross-platform Android and iOS applications.",
+        "Optimized database indexing in PostgreSQL, reducing query latency by 40%."
+      ]
+    }
+  ],
+  "skills": {
+    "technical": [
+      "Flutter",
+      "Dart",
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "SQLite",
+      "Docker",
+      "Kubernetes",
+      "Git",
+      "REST APIs",
+      "System Design",
+      "AI Agents",
+      "Antigravity",
+      "Claude API",
+      "LLM Integration",
+      "ChatGPT"
+    ],
+    "soft": [
+      "Team Leadership",
+      "Communication"
+    ],
+    "languages": [
+      "English"
+    ],
+    "certifications": []
+  },
+  "projects": [
+    {
+      "name": "ResumeAI Pro: Enterprise AI Resume Workspace featuring dynamic design preservation and 10-module intelligence.",
+      "tech": "",
+      "desc": ""
+    },
+    {
+      "name": "SmartScan AI: High-performance OCR document scanner app for Android and iOS.",
+      "tech": "",
+      "desc": ""
+    }
+  ],
+  "extra": [],
+  "ats_keywords": [
+    "Flutter",
+    "Dart",
+    "Python",
+    "FastAPI",
+    "PostgreSQL",
+    "SQLite",
+    "Docker",
+    "Kubernetes"
+  ],
+  "ats_score": 92,
+  "estimated_pages": 1,
+  "works": [
+    {
+      "co": "Independent Advisory & Consulting",
+      "des": "Independent Consultant",
+      "start": "April 2025",
+      "end": "Present",
+      "loc": "Remote",
+      "bullets": [
+        "Managed client requirements and led recruitment operations for tech engineering projects.",
+        "Architected and deployed multiple live AI projects using AI developer platforms (Antigravity, Claude, ChatGPT, Z.ai) over 1.5+ years."
+      ]
+    },
+    {
+      "co": "Tech Solutions Pvt Ltd",
+      "des": "Senior Software Engineer",
+      "start": "Jan 2022",
+      "end": "March 2025",
+      "loc": "Bengaluru, India",
+      "bullets": [
+        "Architected enterprise mobile workspace application using Flutter, Dart, and Python FastAPI.",
+        "Built microservices backend deployed on Render and AWS ECS handling 300k monthly requests.",
+        "Spearheaded team of 6 engineers, implementing CI/CD pipelines and automated testing suites."
+      ]
+    },
+    {
+      "co": "Innovate Tech Labs",
+      "des": "Software Engineer",
+      "start": "Jun 2019",
+      "end": "Dec 2021",
+      "loc": "Hyderabad, India",
+      "bullets": [
+        "Developed core frontend components for cross-platform Android and iOS applications.",
+        "Optimized database indexing in PostgreSQL, reducing query latency by 40%."
+      ]
+    }
+  ],
+  "layout_blueprint": {
+    "template_type": "original",
+    "primary_color": "#0052CC",
+    "secondary_color": "#2B6CB0",
+    "text_color": "#2D3748",
+    "font_family_header": "Inter",
+    "font_family_body": "Inter",
+    "header_style": "left_aligned",
+    "has_sidebar": false,
+    "margin_horizontal": 20.0,
+    "margin_vertical": 18.0,
+    "section_ordering": [
+      "personal",
+      "summary",
+      "experience",
+      "education",
+      "skills",
+      "projects"
+    ]
+  }
+}

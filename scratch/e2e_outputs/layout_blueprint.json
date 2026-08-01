@@ -1,0 +1,20 @@
+{
+  "template_type": "original",
+  "primary_color": "#0052CC",
+  "secondary_color": "#2B6CB0",
+  "text_color": "#2D3748",
+  "font_family_header": "Inter",
+  "font_family_body": "Inter",
+  "header_style": "left_aligned",
+  "has_sidebar": false,
+  "margin_horizontal": 20.0,
+  "margin_vertical": 18.0,
+  "section_ordering": [
+    "personal",
+    "summary",
+    "experience",
+    "education",
+    "skills",
+    "projects"
+  ]
+}
