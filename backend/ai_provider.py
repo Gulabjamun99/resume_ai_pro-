@@ -50,8 +50,11 @@ def _get_anthropic_client():
 def _get_gemini_client():
     global _gemini_client
     if _gemini_client is None:
+        key = os.environ.get("GEMINI_API_KEY", "").strip()
+        if not key:
+            raise ValueError("GEMINI_API_KEY environment variable is missing or empty.")
         from google import genai
-        _gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        _gemini_client = genai.Client(api_key=key)
     return _gemini_client
 
 
@@ -195,7 +198,6 @@ def _call_claude(prompt: str, max_tokens: int) -> str:
 
 
 def _call_gemini(prompt: str, max_tokens: int) -> str:
-    client = _get_gemini_client()
     models_to_try = [
         os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
         "gemini-2.0-flash-lite",
@@ -205,6 +207,7 @@ def _call_gemini(prompt: str, max_tokens: int) -> str:
     last_error = None
     for model_name in models_to_try:
         try:
+            client = _get_gemini_client()
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
@@ -220,20 +223,8 @@ def _call_gemini(prompt: str, max_tokens: int) -> str:
             print(f"Gemini model '{model_name}' failed: {e}")
             last_error = e
 
-    # Safe JSON fallback if API key or quota issue occurs — never throw 403/404 to user
-    print(f"All Gemini models failed. Last error: {last_error}. Returning resilient fallback.")
-    return json.dumps({
-        "personal": {"name": "Candidate", "phone": "", "email": "", "city": "", "linkedin": "", "github": "", "role": "Professional"},
-        "summary": "Experienced professional with a strong track record of project execution and problem-solving.",
-        "education": [],
-        "experience": [],
-        "skills": {"technical": ["Problem Solving", "Communication"], "soft": [], "languages": ["English"], "certifications": []},
-        "projects": [],
-        "extra": [],
-        "ats_keywords": ["Professional", "Engineering"],
-        "ats_score": 88,
-        "estimated_pages": 1
-    })
+    print(f"Gemini call failed. Last error: {last_error}.")
+    return ""
 
 
 def _call_groq(prompt: str, max_tokens: int) -> str:

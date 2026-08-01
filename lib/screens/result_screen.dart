@@ -468,14 +468,14 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   void _showPaymentModal(String format) {
     final utrCtrl = TextEditingController();
+    bool isVerifying = false;
+    String errorMsg = '';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          bool isVerifying = false;
-          String errorMsg = '';
 
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
