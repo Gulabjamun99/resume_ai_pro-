@@ -29,7 +29,9 @@ class DesignPreservationRenderingEngine {
     estimatedHeight += (resume.education.length * 40);
 
     // Calculate pages based on spec margins and font size
-    final maxPageHeight = 842 - (spec.marginTop + spec.marginBottom);
+    final marginTop = (spec.margins['top'] as num?)?.toDouble() ?? 36.0;
+    final marginBottom = (spec.margins['bottom'] as num?)?.toDouble() ?? 36.0;
+    final maxPageHeight = 842 - (marginTop + marginBottom);
     final calculatedPages = (estimatedHeight / maxPageHeight).ceil();
     final finalPageCount = calculatedPages > 0 ? calculatedPages : 1;
 
@@ -47,8 +49,8 @@ class DesignPreservationRenderingEngine {
 
     final typoVal = {
       'font_family': spec.fontFamily,
-      'primary_color': spec.primaryColor,
-      'font_scale_ratio': spec.fontScaleRatio,
+      'primary_color': spec.primaryColorHex,
+      'font_scale_ratio': 1.0,
       'hierarchy_validated': true,
     };
 
@@ -60,14 +62,14 @@ class DesignPreservationRenderingEngine {
 
     return RenderReport(
       renderId: 'render_${DateTime.now().millisecondsSinceEpoch}',
+      renderFingerprint: 'fp_render_${DateTime.now().millisecondsSinceEpoch}',
       templateUsed: selectedTemplate,
       pageCount: finalPageCount,
       renderDurationMs: renderDuration < 1.0 ? 12.5 : renderDuration,
       layoutValidation: layoutVal,
       typographyValidation: typoVal,
-      pageBudgetValidation: pageBudgetVal,
+      exportValidation: pageBudgetVal,
       outputFormats: ['PDF', 'DOCX'],
-      renderingVersion: '2.0-DesignPreservationEngine',
       timestamp: DateTime.now().toIso8601String(),
     );
   }

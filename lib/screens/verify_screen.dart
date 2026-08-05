@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
 import '../models/resume_model.dart';
-import 'payment_screen.dart';
+import 'building_screen.dart';
+
 
 class VerifyScreen extends StatelessWidget {
   final ResumeRequest request;
@@ -23,7 +24,7 @@ class VerifyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = request;
-    final plan = _isJD ? 'JD-Tailored — ₹10' : (d.exp >= 4 ? 'Senior — ₹50' : 'Junior — ₹20');
+    final plan = _isJD ? 'JD-Tailored' : (d.exp >= 4 ? 'Senior Professional' : 'Junior Professional');
     final planColor = _isJD ? AppColors.blue : (d.exp >= 4 ? AppColors.accent : AppColors.green);
 
     return Scaffold(
@@ -99,7 +100,7 @@ class VerifyScreen extends StatelessWidget {
                         ...[
                           'Check phone number and email for recruiter outreach',
                           'Verify company designations, employment dates, and metrics',
-                          'Confirm experience duration (determines your plan pricing)',
+                          'Confirm your experience duration',
                         ].map(
                           (t) => Padding(
                             padding: const EdgeInsets.only(bottom: 4),
@@ -147,7 +148,7 @@ class VerifyScreen extends StatelessWidget {
                       title: 'Education',
                       items: {
                         for (var e in d.edus.where((e) => e.deg.isNotEmpty || e.col.isNotEmpty))
-                          '${e.deg}': '${e.col}${e.yr.isNotEmpty ? ' | ${e.yr}' : ''}${e.grade.isNotEmpty ? ' | ${e.grade}' : ''}'
+                          e.deg: '${e.col}${e.yr.isNotEmpty ? ' | ${e.yr}' : ''}${e.grade.isNotEmpty ? ' | ${e.grade}' : ''}'
                       },
                     ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
 
@@ -221,11 +222,9 @@ class VerifyScreen extends StatelessWidget {
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => PaymentScreen(
+                            builder: (_) => BuildingScreen(
+                              plan: 'senior',
                               request: request,
-                              templateId: templateId,
-                              templateColor: templateColor,
-                              jobDescription: jobDescription,
                             ),
                           ),
                         ),

@@ -26,8 +26,7 @@ class VersionHistoryEngine {
 
     final affected = List<String>.from(patch['affected_sections'] ?? []);
     final intent = patch['reasoning_summary'] ?? 'Update';
-
-    String commitMsg = 'Applied section-scoped edits to [${affected.join(", ")}].';
+    String commitMsg = '$intent: Applied section-scoped edits to [${affected.join(", ")}].';
     if (triggerPrompt.toLowerCase().contains('google')) {
       commitMsg = 'Tailored resume experience and technical skills for Google AI Architect target role.';
     } else if (triggerPrompt.toLowerCase().contains('aws')) {
@@ -126,7 +125,7 @@ class VersionHistoryEngine {
   Map<String, dynamic> generateAnalytics() {
     return {
       'total_versions': _repository.length,
-      'total_edits': _repository.length > 0 ? _repository.length - 1 : 0,
+      'total_edits': _repository.isNotEmpty ? _repository.length - 1 : 0,
       'most_modified_section': 'experience',
       'average_ats_improvement': '+5.2 points',
       'recruiter_score_trend': _repository.map((c) => c.recruiterScore).toList(),

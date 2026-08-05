@@ -6,13 +6,24 @@ import 'package:path_provider/path_provider.dart';
 import '../models/resume_model.dart';
 
 class ApiService {
-  // ⚠️ Apna backend URL yahan daalo
-  // Local testing: 'http://10.0.2.2:8000'  (Android emulator)
-  // Real phone:    'http://192.168.1.XX:8000' (apna WiFi IP)
-  // Production:    'https://your-backend.onrender.com'
+  // ── Production Render Cloud Backend URL ────────────────────────────────────
   static const String baseUrl = 'https://resume-ai-backend-85zs.onrender.com';
-  // ⚠️ Owner ka UPI ID yahan change krein
-  static const String paymentUpiId = 'rahul@upi';
+
+  // Legacy constant kept for backward compatibility with payment_screen.dart
+  static const String paymentUpiId = 'owner@upi';
+
+  /// Pings the cloud backend to wake it up if sleeping on Render's free tier.
+  static Future<bool> wakeUpServer() async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/health'))
+          .timeout(const Duration(seconds: 45));
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+
 
   static Future<ResumeData> generateResume(ResumeRequest req, {String templateId = 'classic', String templateColor = '#1a1a2e'}) async {
     final body = req.toJson();
@@ -184,7 +195,7 @@ class ApiService {
   }
 
   /// Incremental natural language edit (Hinglish/Hindi/English)
-  static Future<ResumeData> chatEditResume(ResumeData current, String userMessage) async {
+  static Future<Map<String, dynamic>> chatEditResume(ResumeData current, String userMessage) async {
     final resp = await http.post(
       Uri.parse('$baseUrl/chat-edit'),
       headers: {'Content-Type': 'application/json'},
@@ -196,7 +207,10 @@ class ApiService {
 
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body);
-      return ResumeData.fromJson(data['data']);
+      return {
+        'resume': ResumeData.fromJson(data['data']),
+        'message': data['message'] ?? 'Resume updated successfully',
+      };
     }
     throw Exception('Chat edit failed');
   }

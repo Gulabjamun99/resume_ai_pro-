@@ -3,21 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const bg = Color(0xFF0D0D0D);
-  static const bg2 = Color(0xFF161616);
-  static const bg3 = Color(0xFF1E1E1E);
-  static const bg4 = Color(0xFF252525);
-  static const border = Color(0xFF2C2C2C);
-  static const border2 = Color(0xFF383838);
-  static const text = Color(0xFFEFEFEF);
-  static const text2 = Color(0xFF999999);
-  static const text3 = Color(0xFF555555);
-  static const accent = Color(0xFFC8F542);
-  static const accent2 = Color(0xFFB2DC2E);
-  static const green = Color(0xFF3ECF8E);
-  static const red = Color(0xFFF56565);
-  static const gold = Color(0xFFF6C90E);
-  static const blue = Color(0xFF60A5FA);
+  static const bg = Color(0xFF07090E);          // Deep Space Dark
+  static const bg2 = Color(0xFF101420);         // Glass Card Base
+  static const bg3 = Color(0xFF171C2E);         // Elevated Card Surface
+  static const bg4 = Color(0xFF20263C);         // Active Element Background
+  static const border = Color(0xFF242C44);      // Subtle Glass Border
+  static const border2 = Color(0xFF3B476C);     // Glowing Border Accent
+  static const text = Color(0xFFF8FAFC);        // Crisp White
+  static const text2 = Color(0xFF94A3B8);       // Cool Gray Subtext
+  static const text3 = Color(0xFF64748B);       // Muted Label
+  static const accent = Color(0xFF10B981);      // Electric Emerald
+  static const accent2 = Color(0xFF34D399);     // Emerald Glow
+  static const green = Color(0xFF10B981);       // Emerald Green Alias
+  static const red = Color(0xFFEF4444);         // Warning Red
+  static const gold = Color(0xFFF59E0B);        // ATS Gold Accent
+  static const blue = Color(0xFF3B82F6);        // Royal Blue
+  static const cyan = Color(0xFF06B6D4);        // Quantum Cyan
+  static const purple = Color(0xFF8B5CF6);      // Cyber Purple
 }
 
 ThemeData appTheme() {
@@ -28,15 +30,18 @@ ThemeData appTheme() {
     colorScheme: const ColorScheme.dark(
       primary: AppColors.accent,
       surface: AppColors.bg2,
+      secondary: AppColors.purple,
     ),
-    textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+    textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.bg2,
       elevation: 0,
+      centerTitle: false,
       titleTextStyle: TextStyle(
         color: AppColors.text,
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
+        fontSize: 17,
+        fontWeight: FontWeight.bold,
+        letterSpacing: -0.3,
       ),
       iconTheme: IconThemeData(color: AppColors.text),
     ),
@@ -44,51 +49,74 @@ ThemeData appTheme() {
       filled: true,
       fillColor: AppColors.bg3,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.border2),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
       ),
-      labelStyle: const TextStyle(color: AppColors.text3, fontSize: 12),
+      labelStyle: const TextStyle(color: AppColors.text2, fontSize: 12.5),
       hintStyle: const TextStyle(color: AppColors.text3, fontSize: 13),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.accent,
-        foregroundColor: Colors.black,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+        elevation: 6,
+        shadowColor: AppColors.accent.withValues(alpha: 0.35),
       ),
     ),
     dividerColor: AppColors.border,
   );
 }
 
-// Common widgets
+// Premium Glassmorphic Cards & Common UI Components
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final Color? borderColor;
   final Color? color;
-  const AppCard({super.key, required this.child, this.padding, this.borderColor, this.color});
+  final Gradient? gradient;
+  final double borderRadius;
+  final List<BoxShadow>? boxShadow;
+
+  const AppCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.borderColor,
+    this.color,
+    this.gradient,
+    this.borderRadius = 16.0,
+    this.boxShadow,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: padding ?? const EdgeInsets.all(16),
+      padding: padding ?? const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: color ?? AppColors.bg2,
-        border: Border.all(color: borderColor ?? AppColors.border),
-        borderRadius: BorderRadius.circular(10),
+        gradient: gradient,
+        border: Border.all(color: borderColor ?? AppColors.border, width: 1.2),
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: boxShadow ?? [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
@@ -97,17 +125,35 @@ class AppCard extends StatelessWidget {
 
 class SectionTitle extends StatelessWidget {
   final String icon, title;
-  const SectionTitle({super.key, required this.icon, required this.title});
+  final String? subtitle;
+  const SectionTitle({super.key, required this.icon, required this.title, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
-      child: Row(children: [
-        Text(icon, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.text)),
-      ]),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.text, letterSpacing: -0.2)),
+              if (subtitle != null)
+                Text(subtitle!, style: const TextStyle(fontSize: 11, color: AppColors.text2)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -127,16 +173,16 @@ class AppTextField extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       RichText(text: TextSpan(
         text: label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.text3, letterSpacing: 0.5),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.text2, letterSpacing: 0.3),
         children: required ? [const TextSpan(text: ' *', style: TextStyle(color: AppColors.accent))] : [],
       )),
-      const SizedBox(height: 5),
+      const SizedBox(height: 6),
       TextFormField(
         controller: controller,
         keyboardType: keyboardType ?? (multiline ? TextInputType.multiline : TextInputType.text),
         maxLines: multiline ? null : 1,
         minLines: multiline ? 3 : 1,
-        style: const TextStyle(color: AppColors.text, fontSize: 13),
+        style: const TextStyle(color: AppColors.text, fontSize: 13.5),
         decoration: InputDecoration(hintText: hint),
       ),
     ]);
@@ -146,18 +192,29 @@ class AppTextField extends StatelessWidget {
 class AccentBadge extends StatelessWidget {
   final String text;
   final Color? color, bg;
-  const AccentBadge(this.text, {super.key, this.color, this.bg});
+  final IconData? icon;
+  const AccentBadge(this.text, {super.key, this.color, this.bg, this.icon});
 
   @override
   Widget build(BuildContext context) {
+    final textColor = color ?? AppColors.accent;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: bg ?? AppColors.accent.withOpacity(0.12),
+        color: bg ?? textColor.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: (color ?? AppColors.accent).withOpacity(0.3)),
+        border: Border.all(color: textColor.withValues(alpha: 0.35), width: 1.2),
       ),
-      child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color ?? AppColors.accent)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: textColor),
+            const SizedBox(width: 4),
+          ],
+          Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: textColor)),
+        ],
+      ),
     );
   }
 }

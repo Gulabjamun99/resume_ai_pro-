@@ -4,8 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
-import 'form_screen.dart';
-import 'building_screen.dart';
+
 import 'design_choice_screen.dart';
 
 class CVUploadScreen extends StatefulWidget {
@@ -41,7 +40,7 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'txt'],
+        allowedExtensions: ['pdf', 'docx', 'doc', 'jpg', 'jpeg', 'png', 'txt', 'xps'],
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -154,29 +153,71 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
               borderRadius: BorderRadius.circular(16),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 42),
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.accent.withOpacity(0.6), width: 1.5),
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.bg2,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.bg2,
+                      AppColors.bg3.withValues(alpha: 0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.5), width: 1.5),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.15),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.cloud_upload_rounded, size: 36, color: AppColors.accent),
+                      child: const Icon(Icons.cloud_upload_rounded, size: 34, color: Colors.white),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     const Text(
-                      'Tap to select file from device',
-                      style: TextStyle(fontSize: 15, color: AppColors.text, fontWeight: FontWeight.w700),
+                      'Tap to Select Resume File',
+                      style: TextStyle(fontSize: 16, color: AppColors.text, fontWeight: FontWeight.bold, letterSpacing: -0.2),
                     ),
-                    const SizedBox(height: 4),
-                    const Text('PDF • DOCX • JPG • PNG • TXT', style: TextStyle(fontSize: 11, color: AppColors.text3)),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Supported Formats: PDF • DOCX • DOC • JPG • PNG • TXT • XPS',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.text2, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Badges Row
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: const [
+                        AccentBadge('✨ Universal Domain AI', color: Color(0xFF06B6D4)),
+                        AccentBadge('⚡ Deep XML Parser', color: Color(0xFF10B981)),
+                        AccentBadge('🛡️ Layout Locked', color: Color(0xFF8B5CF6)),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -389,6 +430,23 @@ class _CVUploadScreenState extends State<CVUploadScreen> {
             Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.text)),
             const SizedBox(height: 8),
             Text(sub, style: const TextStyle(fontSize: 13, color: AppColors.text2), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF161922),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_done_rounded, size: 14, color: AppColors.accent),
+                  SizedBox(width: 6),
+                  Text('Cloud AI Engine • Processing 100% of CV details', style: TextStyle(fontSize: 10.5, color: Colors.white60)),
+                ],
+              ),
+            ),
           ],
         ),
       ),

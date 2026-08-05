@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
-import 'cv_source_screen.dart';
+import 'cv_upload_screen.dart';
 import 'jd_paste_screen.dart';
 
 class LandingScreen extends StatelessWidget {
@@ -15,7 +15,7 @@ class LandingScreen extends StatelessWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -23,19 +23,19 @@ class LandingScreen extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.accent, AppColors.accent2],
+                        colors: [Color(0xFF10B981), Color(0xFF06B6D4)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.3),
-                          blurRadius: 10,
+                          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                          blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -44,32 +44,32 @@ class LandingScreen extends StatelessWidget {
                       child: Text(
                         'R',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Colors.white,
                           fontWeight: FontWeight.w900,
-                          fontSize: 22,
+                          fontSize: 26,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
                         'ResumeAI Pro',
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                           color: AppColors.text,
-                          letterSpacing: -0.3,
+                          letterSpacing: -0.5,
                         ),
                       ),
                       Text(
-                        'ATS-Optimized Resume Intelligence Engine',
+                        'Universal Domain AI Resume Studio v6.0',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.text3,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -77,233 +77,201 @@ class LandingScreen extends StatelessWidget {
                 ],
               ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 30),
 
-              // Hero Headline
-              const Text(
-                'Job-Winning Resume\nDesigned for Impact',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.text,
-                  height: 1.15,
-                  letterSpacing: -0.5,
+              // Hero Title
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.text,
+                    height: 1.15,
+                    letterSpacing: -0.6,
+                  ),
+                  children: [
+                    TextSpan(text: 'AI-Powered Resume\n'),
+                    TextSpan(text: 'Built for Any Domain', style: TextStyle(color: AppColors.accent)),
+                  ],
                 ),
               ).animate().fadeIn(delay: 100.ms, duration: 450.ms).slideY(begin: 0.2, end: 0),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               const Text(
-                'Add your career details — our engine structures your experience, validates historical accuracy, and builds an ATS-optimized resume.',
+                'Upload your resume in any format (PDF, DOCX, DOC, Image). Our Deep AI Engine extracts 100% of your career data, locks your original design, and allows multilingual AI editing.',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13.5,
                   color: AppColors.text2,
-                  height: 1.5,
+                  height: 1.55,
                 ),
               ).animate().fadeIn(delay: 200.ms, duration: 450.ms),
 
               const SizedBox(height: 20),
 
-              // Enterprise Badges
+              // Live Badges
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: const [
-                  AccentBadge('✅ ATS Score 90+', color: AppColors.green, bg: Color(0x1F3ECF8E)),
-                  AccentBadge('🎯 5-Stage Guardian Gate', color: AppColors.accent),
-                  AccentBadge('📜 Version History & Diff', color: AppColors.gold, bg: Color(0x1FF6C90E)),
-                  AccentBadge('📄 Binary PDF + DOCX', color: AppColors.blue, bg: Color(0x1F60A5FA)),
+                  AccentBadge('✨ 100% Free Beta', color: Color(0xFF10B981)),
+                  AccentBadge('⚡ Universal Domain AI', color: Color(0xFF06B6D4)),
+                  AccentBadge('🛡️ Layout Locked & Preserved', color: Color(0xFF8B5CF6)),
+                  AccentBadge('📄 DOCX & PDF Export', color: Color(0xFFF59E0B)),
                 ],
               ).animate().fadeIn(delay: 300.ms, duration: 500.ms),
 
               const SizedBox(height: 28),
 
-              // Features Grid
+              // Primary Action 1: Upload CV Card (Glassmorphic Hero Card)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CVUploadScreen()),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF101420), Color(0xFF172033)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.6), width: 1.8),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Upload Existing Resume',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'PDF • DOCX • DOC • JPG • PNG • TXT',
+                                style: TextStyle(fontSize: 12, color: AppColors.text2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.accent, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ).animate().fadeIn(delay: 400.ms, duration: 500.ms).scale(begin: const Offset(0.96, 0.96)),
+
+              const SizedBox(height: 14),
+
+              // Primary Action 2: Tailor to Job Description
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const JDPasteScreen()),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.bg2,
+                      border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4), width: 1.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.cyan.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.gps_fixed_rounded, color: AppColors.cyan, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Tailor to Target Job (JD Match)',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Paste Job Description to optimize ATS score',
+                                style: TextStyle(fontSize: 11.5, color: AppColors.text2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.cyan, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
+
+              const SizedBox(height: 28),
+
+              // Feature Grid
+              const Text(
+                'Powerful Resume AI Features',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text),
+              ),
+              const SizedBox(height: 14),
+
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.35,
+                childAspectRatio: 1.25,
                 children: const [
-                  _FeatureCard('✍️', 'ATS Optimizer', 'Action verbs & strategic keyword density'),
-                  _FeatureCard('🛡️', 'AI Guardian Gate', '5-stage validation prevents hallucinations'),
-                  _FeatureCard('💬', 'Chat Assistant', 'Issue natural language section edits'),
-                  _FeatureCard('📜', 'Time-Travel Versioning', 'Visual visual diffs & non-destructive rollbacks'),
+                  _FeatureCard('⚡', 'Deep XML Parser', 'Reads text boxes, sidebars & 2-column layouts without missing details'),
+                  _FeatureCard('🛡️', 'Layout Preserved', 'Keeps original fonts, text sizes, and visual hierarchy 100% locked'),
+                  _FeatureCard('💬', 'Multilingual Chat', 'Edit resume using Hinglish, Hindi, or English natural language'),
+                  _FeatureCard('📜', 'Version Control', 'Visual diff highlighting with instant Undo & Redo rollbacks'),
                 ],
-              ).animate().fadeIn(delay: 400.ms, duration: 500.ms).scale(begin: const Offset(0.95, 0.95)),
-
-              const SizedBox(height: 24),
-
-              // Pricing Tiers
-              Row(
-                children: [
-                  Expanded(
-                    child: AppCard(
-                      child: Column(
-                        children: const [
-                          Text('Junior (0–3 yr)', style: TextStyle(fontSize: 11, color: AppColors.text3, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 4),
-                          Text('₹20', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.text)),
-                          SizedBox(height: 2),
-                          Text('3 Edits • PDF + DOCX', style: TextStyle(fontSize: 10, color: AppColors.text3)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppCard(
-                      borderColor: AppColors.accent.withOpacity(0.5),
-                      color: AppColors.accent.withOpacity(0.06),
-                      child: Column(
-                        children: const [
-                          Text('Senior (4+ yr)', style: TextStyle(fontSize: 11, color: AppColors.text3, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 4),
-                          Text('₹50', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.accent)),
-                          SizedBox(height: 2),
-                          Text('3 Edits • Executive Focus', style: TextStyle(fontSize: 10, color: AppColors.text3)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
-
-              const SizedBox(height: 28),
-
-              // Main CTA Button (Minimum 52dp Touch Target)
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CVSourceScreen()),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    elevation: 4,
-                    shadowColor: AppColors.accent.withOpacity(0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Start Building My Resume',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 20),
-                    ],
-                  ),
-                ),
-              ).animate().fadeIn(delay: 600.ms, duration: 500.ms).slideY(begin: 0.1, end: 0),
-
-              const SizedBox(height: 12),
-
-              // Secondary CTA Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const JDPasteScreen()),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.blue,
-                    side: BorderSide(color: AppColors.blue.withOpacity(0.5), width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.gps_fixed_rounded, color: AppColors.blue, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Tailor to Job Description — ₹10',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ).animate().fadeIn(delay: 700.ms, duration: 500.ms),
-
-              const SizedBox(height: 28),
-
-              // Career Tips Card
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.lightbulb_outline_rounded, color: AppColors.gold, size: 16),
-                        SizedBox(width: 6),
-                        Text(
-                          'FREE CAREER TIPS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.text3,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...[
-                      'Use impact action verbs: Architected, Spearheaded, Delivered',
-                      'Quantify metrics: "Improved API latency by 45%"',
-                      'Match core ATS keywords from target job specs',
-                      'Keep experience under 5 years strictly on 1 page',
-                      'Include verified LinkedIn and GitHub URLs',
-                    ].map(
-                      (tip) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '• ',
-                              style: TextStyle(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                tip,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.text2,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(delay: 800.ms, duration: 500.ms),
+              ).animate().fadeIn(delay: 600.ms, duration: 500.ms),
 
               const SizedBox(height: 24),
             ],
@@ -329,22 +297,14 @@ class _FeatureCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.text,
-            ),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.text),
           ),
           const SizedBox(height: 4),
-          Text(
-            desc,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.text3,
-              height: 1.3,
+          Expanded(
+            child: Text(
+              desc,
+              style: const TextStyle(fontSize: 10.5, color: AppColors.text2, height: 1.35),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

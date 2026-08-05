@@ -1,8 +1,6 @@
 // lib/screens/result_screen.dart
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../models/resume_model.dart';
 import '../models/template_model.dart';
@@ -43,7 +41,6 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   final _jdTextCtrl = TextEditingController();
   bool _isSending = false;
   bool _isDownloading = false;
-  bool _isPaid = false;
 
   // Analysis State
   Map<String, dynamic>? _recruiterReview;
@@ -53,15 +50,13 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   bool _isLoadingSuggestions = false;
   bool _isMatchingJD = false;
 
-  int get _amount => widget.isJDTailored ? 10 : (widget.plan == 'senior' ? 50 : 20);
-
   final List<String> _quickPrompts = [
     'Summary short karo',
-    '2025 me AWS certification ki',
-    'Python skills top pe kar do',
+    'Experience bullets strong banao',
+    'Skills section update karo',
     'Experience bullets dynamic banao',
-    'Resume Google ke liye optimize karo',
-    'Internship bullets tighten karo',
+    'Resume optimize karo',
+    'Summary professional banao',
   ];
 
   // Version History State Machine (Git Commit Tree)
@@ -110,11 +105,10 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
     _messages.add(_ChatMsg(
       isAI: true,
-      text: '✨ Welcome to your Live Resume Workspace!\n\nATS Optimization Score: ${_resume.atsScore}/100\n\nYou can chat naturally in Hinglish or English to edit any section (e.g. "Summary short karo" or "2025 me AWS certification complete ki"). I will update your resume live with zero data loss!',
+      text: '✨ Welcome to your Live Resume Workspace!\n\nATS Optimization Score: ${_resume.atsScore}/100\n\nYou can chat naturally in Hinglish or English to edit any section (e.g. "Summary short karo" or "Skills update karo"). I will update your resume live with zero data loss!',
     ));
 
     _loadInitialAnalysis();
-    _loadUserPreferences();
     _fetchServerVersions();
   }
 
@@ -167,13 +161,16 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _scrollToBottom();
 
     try {
-      final updated = await ApiService.chatEditResume(_resume, msg);
+      final editRes = await ApiService.chatEditResume(_resume, msg);
+      final updated = editRes['resume'] as ResumeData;
+      final aiMessage = editRes['message'] as String;
+
       if (mounted) {
         setState(() {
           _messages.removeLast();
           _messages.add(_ChatMsg(
             isAI: true,
-            text: '✅ Resume updated successfully! All requested changes are live in your preview canvas.',
+            text: aiMessage,
           ));
           if (_currentVersionIndex < _versionHistory.length - 1) {
             _versionHistory.removeRange(_currentVersionIndex + 1, _versionHistory.length);
@@ -191,7 +188,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           _messages.removeLast();
           _messages.add(_ChatMsg(
             isAI: true,
-            text: '⚠️ Could not reach server to apply this edit. Please check your internet connection or try again in a moment.',
+            text: '⚠️ Edit failed: ${e.toString().replaceAll('Exception: ', '')}\n\nPlease check your internet connection or cloud backend status.',
           ));
           _isSending = false;
         });
@@ -236,8 +233,17 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           _isMatchingJD = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _isMatchingJD = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isMatchingJD = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ JD Match failed: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -256,184 +262,12 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
   }
 
-  bool _hasUsedFreeDownload = false;
-  String _userEmail = '';
-  String _userPhone = '';
-
-  Future<void> _loadUserPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _hasUsedFreeDownload = prefs.getBool('free_download_used') ?? false;
-      _userEmail = prefs.getString('user_email') ?? '';
-      _userPhone = prefs.getString('user_phone') ?? '';
-    });
-  }
-
   Future<void> _handleDownload(String format) async {
-    // If candidate email/phone is missing, capture lead details first
-    if (_userEmail.isEmpty || _userPhone.isEmpty) {
-      _showLeadCaptureModal(format);
-      return;
-    }
-
-    // 1st Resume Download is 100% FREE!
-    if (!_hasUsedFreeDownload) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('free_download_used', true);
-      setState(() => _hasUsedFreeDownload = true);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎁 1st Resume Download Unlocked 100% FREE!'),
-            backgroundColor: Color(0xFF10B981),
-          ),
-        );
-      }
-      await _executeDownload(format);
-      return;
-    }
-
-    // Subsequent downloads require payment
-    if (!_isPaid) {
-      _showPaymentModal(format);
-      return;
-    }
+    // 100% FREE — no payment gate, no lead capture
     await _executeDownload(format);
   }
 
-  void _showLeadCaptureModal(String format) {
-    final emailCtrl = TextEditingController(text: (_resume.personal['email'] ?? '').toString());
-    final phoneCtrl = TextEditingController(text: (_resume.personal['phone'] ?? '').toString());
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          String err = '';
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF13151C),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36, height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.card_giftcard, color: Color(0xFF10B981), size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('🎁 1st Download is 100% FREE!', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                          Text('Enter email & phone to claim your free download', style: TextStyle(color: Colors.white54, fontSize: 11.5)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  TextField(
-                    controller: emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Enter Email ID (e.g. rahul@gmail.com)',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.05),
-                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.white54, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Enter 10-digit Phone Number',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.05),
-                      prefixIcon: const Icon(Icons.phone_android, color: Colors.white54, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  if (err.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(err, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-                  ],
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final em = emailCtrl.text.trim();
-                        final ph = phoneCtrl.text.trim();
-                        if (em.isEmpty || !em.contains('@')) {
-                          setModalState(() => err = 'Please enter a valid Email Address');
-                          return;
-                        }
-                        if (ph.length < 10) {
-                          setModalState(() => err = 'Please enter a valid 10-digit Phone Number');
-                          return;
-                        }
-
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('user_email', em);
-                        await prefs.setString('user_phone', ph);
-
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        setState(() {
-                          _userEmail = em;
-                          _userPhone = ph;
-                        });
-                        _handleDownload(format);
-                      },
-                      icon: const Icon(Icons.download, color: Colors.white, size: 18),
-                      label: const Text('Unlock 1st Free Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  // Lead capture and payment modals removed — all downloads are free
 
   Future<void> _executeDownload(String format) async {
     setState(() => _isDownloading = true);
@@ -466,171 +300,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
   }
 
-  void _showPaymentModal(String format) {
-    final utrCtrl = TextEditingController();
-    bool isVerifying = false;
-    String errorMsg = '';
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF13151C),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36, height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.download_for_offline, color: AppColors.accent, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Download HD ${format.toUpperCase()} Resume',
-                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                          ),
-                          const Text('ATS Compliant • Lifetime Access', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(
-                            widget.isJDTailored ? 'Job Tailoring Unlock' : '${widget.plan.toUpperCase()} Resume Download',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                          const Text('Instant PDF & Editable DOCX', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                        ]),
-                        Text('₹$_amount', style: const TextStyle(color: AppColors.accent, fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text('Pay via UPI ID or QR code:', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(ApiService.paymentUpiId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                        GestureDetector(
-                          onTap: () async {
-                            final upiUrl = 'upi://pay?pa=${ApiService.paymentUpiId}&pn=ResumeAI%20Pro&am=$_amount&cu=INR';
-                            if (await canLaunchUrl(Uri.parse(upiUrl))) {
-                              await launchUrl(Uri.parse(upiUrl));
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: const BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.all(Radius.circular(6))),
-                            child: const Text('Pay Now', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: utrCtrl,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Enter 12-digit UTR / Reference No.',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  if (errorMsg.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(errorMsg, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-                  ],
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: isVerifying
-                          ? null
-                          : () async {
-                              final utr = utrCtrl.text.trim();
-                              if (utr.length != 12 || int.tryParse(utr) == null) {
-                                setModalState(() => errorMsg = 'Please enter valid 12-digit UTR number');
-                                return;
-                              }
-                              setModalState(() {
-                                isVerifying = true;
-                                errorMsg = '';
-                              });
-                              final ok = await ApiService.verifyPayment(utr, _amount);
-                              if (ok) {
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                setState(() => _isPaid = true);
-                                _executeDownload(format);
-                              } else {
-                                setModalState(() {
-                                  isVerifying = false;
-                                  errorMsg = 'Payment verification pending. Try again in a moment.';
-                                });
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: isVerifying
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text('Verify & Download ${format.toUpperCase()}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  // Payment modal removed — all downloads are free
 
   void _openTemplateSelector() {
     showModalBottomSheet(
@@ -873,9 +543,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                     icon: _isDownloading
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Icon(Icons.download_rounded, color: Colors.white, size: 20),
-                    label: Text(
-                      _isPaid ? 'Download PDF' : 'Download PDF (₹$_amount)',
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                    label: const Text(
+                      'Download PDF  FREE',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,
@@ -895,44 +565,71 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   // ── Tab 1: Live Preview Canvas ──────────────────────────
   Widget _buildLivePreviewTab(String templateName) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Quick template switcher bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1D27),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(children: [
-                  const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
-                  const SizedBox(width: 8),
-                  Text('Template: $templateName', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+    return Column(
+      children: [
+        // Quick template switcher bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1D27),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
+                const SizedBox(width: 8),
+                Text('Template: $templateName', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              ]),
+              GestureDetector(
+                onTap: _openTemplateSelector,
+                child: const Row(children: [
+                  Icon(Icons.swap_horiz, color: AppColors.accent, size: 16),
+                  SizedBox(width: 4),
+                  Text('Change', style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
                 ]),
-                GestureDetector(
-                  onTap: _openTemplateSelector,
-                  child: const Text('Change Template', style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        // Zoom hint
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(children: [
+            const Icon(Icons.pinch_outlined, size: 12, color: Colors.white38),
+            const SizedBox(width: 6),
+            Text('Pinch to zoom • Scroll to see full resume', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.4))),
+          ]),
+        ),
+        // Full scrollable + zoomable preview
+        Expanded(
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 3.0,
+            boundaryMargin: const EdgeInsets.all(40),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  ResumePreview(
+                    data: _resume,
+                    templateId: _activeTemplateId,
+                    templateColor: _activeTemplateColor,
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
-          ResumePreview(
-            data: _resume,
-            templateId: _activeTemplateId,
-            templateColor: _activeTemplateColor,
-          ),
-          const SizedBox(height: 30),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   // ── Tab 2: Conversational Live Assistant ────────────────
   Widget _buildLiveAssistantTab() {

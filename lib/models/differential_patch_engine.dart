@@ -2,7 +2,6 @@
 import 'edit_plan.dart';
 import 'patch_result.dart';
 import 'resume_workspace.dart';
-import 'resume_model.dart';
 
 /// Section-Scoped Differential Patch Engine (Module 6)
 /// Generates deterministic Git-style diff patches based on EditPlan.

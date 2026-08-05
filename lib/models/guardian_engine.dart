@@ -104,13 +104,15 @@ class AIResumeGuardian {
     };
 
     return GuardianValidationResult(
+      validationId: 'val_${DateTime.now().millisecondsSinceEpoch}',
       guardianStatus: status,
       validationScore: score,
       violations: violations,
       warnings: warnings,
-      autoRepairs: autoRepairs,
+      autoRepairs: autoRepairs.map((r) => {'repair_action': r}).toList(),
       approvedPatch: patchResult.toJson(),
       rollbackRequired: rollback,
+      guardianSignature: 'sig_guardian_v1',
       guardianReport: report,
     );
   }
