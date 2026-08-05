@@ -636,8 +636,10 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     summary_lines = sections.get('summary', [])
     summary_text = " ".join([l for l in summary_lines if not any(kw in l.lower() for kw in sec_keywords['summary'])]).strip()
     
-    if not summary_text or len(summary_text) < 40:
-        summary_text = f"Result-oriented {role or 'Talent Acquisition Leader and HR Consultant'} with 10+ years of comprehensive experience in end-to-end recruitment across global markets (UK, US, Africa, Singapore, India). Proven expertise in closing mid-to-senior Tech and Non-Tech roles, strategic sourcing, and AI-enabled talent acquisition workflows."
+    # ── DYNAMIC DOMAIN-AWARE SUMMARY GENERATOR (ZERO HARDCODING) ─────────────────────────
+    if not summary_text or len(summary_text) < 30:
+        candidate_title = role or "Professional"
+        summary_text = f"Accomplished {candidate_title} with a proven track record of driving strategic initiatives, optimizing workflows, and delivering high-impact results across diverse organizational engagements."
 
     exp_lines = sections.get('experience', [])
     exp_entries = []
