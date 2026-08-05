@@ -469,6 +469,70 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Exact structure:
         return JSONResponse(content={"success": True, "data": parsed})
 
 
+# ── Top-Level Dynamic Top Experience Generator ───────────────────────────
+def build_dynamic_top_experience(additional_info: str, candidate_role: str = "") -> dict:
+    if not additional_info or len(additional_info.strip()) < 5:
+        return {}
+    info_lower = additional_info.lower()
+    
+    # Detect role dynamically from user note or CV header role
+    des_title = ""
+    if "doctor" in info_lower or "clinic" in info_lower or "physician" in info_lower:
+        des_title = "Consulting Physician / Clinical Specialist"
+    elif "lawyer" in info_lower or "legal" in info_lower or "advocate" in info_lower:
+        des_title = "Legal Consultant & Advocate"
+    elif "software" in info_lower or "developer" in info_lower or "engineer" in info_lower or "react" in info_lower or "python" in info_lower:
+        des_title = "Senior Software & Technology Consultant"
+    elif "hr" in info_lower or "recruit" in info_lower or "talent" in info_lower or "hiring" in info_lower:
+        des_title = "Independent HR & Talent Consultant"
+    elif "finance" in info_lower or "account" in info_lower or "audit" in info_lower:
+        des_title = "Financial Advisory & Audit Consultant"
+    elif "marketing" in info_lower or "growth" in info_lower or "sales" in info_lower:
+        des_title = "Growth & Marketing Consultant"
+    elif "teacher" in info_lower or "professor" in info_lower or "educat" in info_lower:
+        des_title = "Academic Consultant & Educator"
+    elif candidate_role:
+        des_title = f"Independent {candidate_role} Consultant"
+    else:
+        des_title = "Independent Professional Consultant"
+
+    start_date = "2025"
+    if "april" in info_lower:
+        start_date = "April 2025"
+    elif "jan" in info_lower:
+        start_date = "Jan 2025"
+    elif re.search(r'\b(20\d{2})\b', info_lower):
+        start_date = re.search(r'\b(20\d{2})\b', info_lower).group(0)
+
+    company = "Independent Advisory & Recruiting" if ("recruit" in info_lower or "hr" in info_lower) else "Independent Consulting & Advisory"
+    if "clinic" in info_lower:
+        company = "Private Clinical Practice"
+    elif "chambers" in info_lower or "advocate" in info_lower:
+        company = "Legal Practice & Advisory"
+    elif "freelance" in info_lower:
+        company = "Freelance Professional Services"
+
+    tools_found = re.findall(r'\b[A-Z][a-zA-Z0-9+#.]{2,}\b', additional_info)
+    _stop_tools = {"Independent", "Consult", "Clients", "Requirement", "Job", "Projects", "Live", "Add", "New", "Mein", "Karo", "Kiya", "Rhe", "Hai", "Baad"}
+    clean_tools = [t for t in tools_found if t not in _stop_tools]
+
+    b1 = "Spearheaded independent consulting engagements for clients, managing project lifecycles and delivering high-impact solutions to meet strategic objectives."
+    if clean_tools:
+        b2 = f"Leveraging key industry tools and platforms ({', '.join(clean_tools[:5])}) over 1.5+ years to build automated workflows, optimize project efficiency, and deliver live solutions."
+    else:
+        b2 = "Leveraging modern digital platforms and analytics over 1.5+ years to architect scalable workflows and candidate/client evaluation tools."
+    b3 = "Partnered directly with client leadership and stakeholders to align strategies, optimize performance, and deliver tailored reporting."
+
+    return {
+        "co": company,
+        "des": des_title,
+        "start": start_date,
+        "end": "Present",
+        "loc": "Remote / Hybrid",
+        "bullets": [b1, b2, b3]
+    }
+
+
 # ── Auto-Build Complete Resume from CV + Updates (1-Step) ─
 def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> dict:
     lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
@@ -511,7 +575,6 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     if loc_match:
         city = loc_match.group(2).strip()
     else:
-        # Check header lines for location terms (city, country, address)
         for l in lines[:8]:
             if '|' in l or ',' in l or '-' in l:
                 parts = re.split(r'[|,-]', l)
@@ -573,7 +636,6 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     summary_lines = sections.get('summary', [])
     summary_text = " ".join([l for l in summary_lines if not any(kw in l.lower() for kw in sec_keywords['summary'])]).strip()
     
-    # If summary is empty or too short, generate professional ATS summary
     if not summary_text or len(summary_text) < 40:
         summary_text = f"Result-oriented {role or 'Talent Acquisition Leader and HR Consultant'} with 10+ years of comprehensive experience in end-to-end recruitment across global markets (UK, US, Africa, Singapore, India). Proven expertise in closing mid-to-senior Tech and Non-Tech roles, strategic sourcing, and AI-enabled talent acquisition workflows."
 
@@ -585,7 +647,6 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
         if any(kw in l.lower() for kw in sec_keywords['experience']):
             continue
         
-        # Match company line with Pipe | or date ranges (2013, 2016, 2017, 2018, 2019, 2022, 2023, 2025, Present)
         if '|' in l or ' – ' in l or ' - ' in l or re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2})\b', l, re.I):
             if curr_exp and (curr_exp['co'] or curr_exp['bullets']):
                 exp_entries.append(curr_exp)
@@ -603,7 +664,6 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
             start_dt = dates.split('–')[0].split('-')[0].strip() if dates else ""
             end_dt = dates.split('–')[1].strip() if '–' in dates and len(dates.split('–')) > 1 else ("Present" if "present" in dates.lower() else "")
 
-            # Clean company name
             co_clean = re.sub(r'^(End\s*-to-End\s+Recruitment\s+&\s+Talent\s+Acquisition|Stakeholder\s+&\s+Vendor\s+Management|Offer\s+Negotiation\s+&\s+Onboarding|Skills/Position\s+Hired\s+For:)\s*', '', co, flags=re.I).strip()
 
             curr_exp = {
@@ -623,70 +683,10 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
         exp_entries.append(curr_exp)
 
     # ── MERGE ADDITIONAL INFO / USER NOTE AS DYNAMIC DOMAIN-AWARE TOP EXPERIENCE ─────────
-    if additional_info and len(additional_info.strip()) > 10:
-        info_lower = additional_info.lower()
-        
-        # Detect role dynamically from user note or CV header role
-        des_title = ""
-        if "doctor" in info_lower or "clinic" in info_lower or "physician" in info_lower:
-            des_title = "Consulting Physician / Clinical Specialist"
-        elif "lawyer" in info_lower or "legal" in info_lower or "advocate" in info_lower:
-            des_title = "Legal Consultant & Advocate"
-        elif "software" in info_lower or "developer" in info_lower or "engineer" in info_lower or "react" in info_lower or "python" in info_lower:
-            des_title = "Senior Software & Technology Consultant"
-        elif "hr" in info_lower or "recruit" in info_lower or "talent" in info_lower or "hiring" in info_lower:
-            des_title = "Independent HR & Talent Consultant"
-        elif "finance" in info_lower or "account" in info_lower or "audit" in info_lower:
-            des_title = "Financial Advisory & Audit Consultant"
-        elif "marketing" in info_lower or "growth" in info_lower or "sales" in info_lower:
-            des_title = "Growth & Marketing Consultant"
-        elif "teacher" in info_lower or "professor" in info_lower or "educat" in info_lower:
-            des_title = "Academic Consultant & Educator"
-        elif role:
-            des_title = f"Independent {role} Consultant"
-        else:
-            des_title = "Independent Professional Consultant"
-
-        # Detect dates dynamically
-        start_date = "2025"
-        if "april" in info_lower:
-            start_date = "April 2025"
-        elif "jan" in info_lower:
-            start_date = "Jan 2025"
-        elif re.search(r'\b(20\d{2})\b', info_lower):
-            start_date = re.search(r'\b(20\d{2})\b', info_lower).group(0)
-
-        # Detect company / practice firm name dynamically
-        company = "Independent Consulting & Advisory"
-        if "clinic" in info_lower:
-            company = "Private Clinical Practice"
-        elif "chambers" in info_lower or "advocate" in info_lower:
-            company = "Legal Practice & Advisory"
-        elif "freelance" in info_lower:
-            company = "Freelance Professional Services"
-
-        # Extract specific tools/skills capitalized in user note to include in bullets dynamically
-        import re as _re_dyn
-        tools_found = _re_dyn.findall(r'\b[A-Z][a-zA-Z0-9+#.]{2,}\b', additional_info)
-        _stop_tools = {"Independent", "Consult", "Clients", "Requirement", "Job", "Projects", "Live", "Add", "New", "Mein", "Karo", "Kiya", "Rhe", "Hai", "Baad"}
-        clean_tools = [t for t in tools_found if t not in _stop_tools]
-
-        b1 = f"Spearheaded independent consulting engagements for clients, managing project lifecycles and delivering high-impact solutions to meet strategic objectives."
-        if clean_tools:
-            b2 = f"Leveraging key industry tools and platforms ({', '.join(clean_tools[:5])}) over 1.5+ years to build automated workflows, optimize project efficiency, and deliver live solutions."
-        else:
-            b2 = f"Leveraging modern digital platforms and analytics over 1.5+ years to architect scalable workflows and candidate/client evaluation tools."
-        b3 = f"Partnered directly with client leadership and stakeholders to align strategies, optimize performance, and deliver tailored reporting."
-
-        top_entry = {
-            "co": company,
-            "des": des_title,
-            "start": start_date,
-            "end": "Present",
-            "loc": "Remote / Hybrid",
-            "bullets": [b1, b2, b3]
-        }
-        exp_entries.insert(0, top_entry)
+    if additional_info and len(additional_info.strip()) > 5:
+        top_entry = build_dynamic_top_experience(additional_info, role)
+        if top_entry:
+            exp_entries.insert(0, top_entry)
 
     edu_lines = sections.get('education', [])
     edu_entries = []
@@ -1076,8 +1076,16 @@ Return ONLY valid JSON matching this exact structure:
                     parsed["summary"] = old_sum[:160].rsplit(" ", 1)[0] + "."
                 dynamic_msg = "✂️ Summary shortened to key professional highlights."
 
-            # Skills edits
-            elif any(w in msg_lower for w in ["skill", "technology", "add", "include", "python", "java", "react", "node", "aws", "docker"]):
+            # Experience / New Job Role edits
+            if any(w in msg_lower for w in ["independent", "consult", "freelance", "job", "role", "work", "experience", "company", "2025", "position", "project"]):
+                top_entry = build_dynamic_top_experience(user_msg, current_data.get("personal", {}).get("role", ""))
+                exp_list = list(parsed.get("experience", []))
+                exp_list.insert(0, top_entry)
+                parsed["experience"] = exp_list
+                dynamic_msg = f"💼 Added new experience ({top_entry['des']} at {top_entry['co']}) in Corporate ATS English!"
+
+            # Skills edits (only if user explicitly mentions 'skill' or 'technology')
+            elif any(w in msg_lower for w in ["skill", "skills", "technology", "technologies", "tech stack"]):
                 sk = dict(parsed.get("skills", {}))
                 primary_key = next((k for k in sk if k not in ["soft", "languages", "certifications"]), "technical")
                 skill_list = list(sk.get(primary_key, []))
