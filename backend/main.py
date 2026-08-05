@@ -670,7 +670,7 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
 
             curr_exp = {
                 "co": co_clean or co,
-                "des": des or role or "HR Executive",
+                "des": des or role or "Professional Specialist",
                 "start": start_dt,
                 "end": end_dt,
                 "loc": loc,
