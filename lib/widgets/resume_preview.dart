@@ -250,21 +250,24 @@ Widget _heading(String text, Color accent, {bool line = true, double size = 12})
 
 Widget _bulletList(List<dynamic> bullets, {String symbol = '•'}) => Column(
   crossAxisAlignment: CrossAxisAlignment.start,
-  children: bullets.where((b) => b.toString().isNotEmpty).map((b) => Padding(
-    padding: const EdgeInsets.only(left: 4, bottom: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$symbol ', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF444444))),
-        Expanded(
-          child: Text(
-            b.toString(),
-            style: const TextStyle(fontSize: 10.5, color: Color(0xFF222222), height: 1.45),
+  children: bullets.where((b) => b.toString().isNotEmpty).map((b) {
+    final cleanB = b.toString().replaceAll(RegExp(r'^[•\-\*\s]+'), '').trim();
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$symbol ', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF444444))),
+          Expanded(
+            child: Text(
+              cleanB,
+              style: const TextStyle(fontSize: 10.5, color: Color(0xFF222222), height: 1.45),
+            ),
           ),
-        ),
-      ],
-    ),
-  )).toList(),
+        ],
+      ),
+    );
+  }).toList(),
 );
 
 Widget _skillChips(List<String> skills, Color accent, {bool solid = false, bool darkBg = false}) => Wrap(
