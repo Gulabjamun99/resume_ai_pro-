@@ -375,10 +375,27 @@ async def upload_cv(file: UploadFile = File(...)):
 
 
 def _ocr_image(content: bytes) -> str:
-    import pytesseract
-    from PIL import Image
-    img = Image.open(io.BytesIO(content))
-    return pytesseract.image_to_string(img)
+    # 1. Try pytesseract local OCR
+    try:
+        import pytesseract
+        from PIL import Image
+        img = Image.open(io.BytesIO(content))
+        txt = pytesseract.image_to_string(img)
+        if txt and len(txt.strip()) > 30:
+            return txt.strip()
+    except Exception:
+        pass
+
+    # 2. Multimodal AI Vision OCR Fallback (Gemini 2.0 Flash)
+    try:
+        if hasattr(ai_provider, "ocr_image_with_vision"):
+            v_txt = ai_provider.ocr_image_with_vision(content)
+            if v_txt and len(v_txt.strip()) > 10:
+                return v_txt.strip()
+    except Exception as e:
+        print("Multimodal Vision OCR error:", e)
+
+    return ""
 
 
 def _ocr_pdf(content: bytes) -> str:
@@ -2020,7 +2037,8 @@ async def download_doc(req: DownloadRequest):
             nr.font.size = Pt(20)
             nr.font.color.rgb = accent_rgb
 
-        if role_val:
+        # Header Role Filter
+        if role_val and role_val.strip().lower() != 'hai':
             role_para = doc.add_paragraph()
             role_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             role_para.paragraph_format.space_after = Pt(2)
@@ -2057,7 +2075,7 @@ async def download_doc(req: DownloadRequest):
                     co = w.get('co') or w.get('company') or w.get('employer') or ''
                     des = w.get('des') or w.get('designation') or w.get('role') or w.get('title') or ''
                     start = w.get('start') or w.get('startDate') or ''
-                    end = w.get('end') or w.get('endDate') or 'Present'
+                    end = w.get('end') or w.get('endDate') or ''
                     loc = w.get('loc') or w.get('location') or ''
                     bullets = w.get('bullets') or w.get('points') or w.get('desc') or w.get('pts') or []
                     if isinstance(bullets, str):
@@ -2070,27 +2088,46 @@ async def download_doc(req: DownloadRequest):
         if exp:
             section_header(doc, 'Work Experience')
             for w in exp:
+                co_clean = re.sub(r'^(End\s*-to-End\s+Recruitment\s+&\s+Talent\s+Acquisition|Stakeholder\s+&\s+Vendor\s+Management|Offer\s+Negotiation\s+&\s+Onboarding|Skills/Position\s+Hired\s+For:)\s*', '', w['co'], flags=re.I).strip()
+                des_clean = w['des'] if (w['des'] and w['des'].strip().lower() not in ['hai', 'role', 'specialist']) else (role_val if role_val and role_val.strip().lower() != 'hai' else "Specialist")
+                
+                if des_clean == role_val and co_clean.lower() in ["remote", "hybrid"]:
+                    des_clean = "Independent Talent Acquisition & HR Consultant"
+
                 title_para = doc.add_paragraph()
                 title_para.paragraph_format.space_before = Pt(4)
                 title_para.paragraph_format.space_after = Pt(0)
-                tr = title_para.add_run(w['des'] if w['des'] else "Role")
+                tr = title_para.add_run(des_clean)
                 tr.bold = True
-                tr.font.size = Pt(9)
+                tr.font.size = Pt(9.5)
+
+                start_str = str(w.get('start', '')).strip()
+                end_str = str(w.get('end', '')).strip()
+                
+                if start_str and end_str and end_str.lower() != 'present':
+                    date_str = f"{start_str} – {end_str}"
+                elif start_str:
+                    date_str = f"{start_str} – Present" if "present" in end_str.lower() else start_str
+                elif end_str and end_str.lower() not in ['present', 'remote']:
+                    date_str = end_str
+                else:
+                    date_str = "Present" if "present" in end_str.lower() else ""
+
+                co_text = f"{co_clean}" + (f" | {date_str}" if date_str else "") + (f" | {w['loc']}" if w['loc'] else "")
                 co_para = doc.add_paragraph()
-                co_para.paragraph_format.space_after = Pt(0)
-                date_str = f"{w['start']} – {w['end']}" if w['start'] else w['end']
-                co_text = f"{w['co']} | {date_str}"
-                if w['loc']: co_text += f" | {w['loc']}"
+                co_para.paragraph_format.space_after = Pt(2)
                 cor = co_para.add_run(co_text)
                 cor.italic = True
                 cor.font.size = Pt(9)
                 cor.font.color.rgb = RGBColor(0x44, 0x44, 0x44)
+
                 for b in w['bullets']:
-                    if b:
+                    b_str = str(b).strip()
+                    if b_str and len(b_str) > 5 and not re.match(r'^\s*(em\s*ail|co\s*ntact|ad\s*dress|\d{8,})', b_str, re.I):
                         bp = doc.add_paragraph(style='List Bullet')
                         bp.paragraph_format.space_after = Pt(1)
                         bp.paragraph_format.left_indent = Cm(0.5)
-                        br = bp.add_run(b)
+                        br = bp.add_run(b_str)
                         br.font.size = Pt(9)
 
         # Education Normalization
@@ -2110,11 +2147,12 @@ async def download_doc(req: DownloadRequest):
         if edus:
             section_header(doc, 'Education')
             for e in edus:
-                if e['deg']:
+                deg_clean = str(e.get('deg', '')).strip()
+                if deg_clean and deg_clean != role_val and deg_clean.lower() != 'hai':
                     ep = doc.add_paragraph()
                     ep.paragraph_format.space_before = Pt(3)
                     ep.paragraph_format.space_after = Pt(0)
-                    er = ep.add_run(e['deg'])
+                    er = ep.add_run(deg_clean)
                     er.bold = True; er.font.size = Pt(9)
                 col_parts = [e['col'], e['yr'], e['grade'], e['honors']]
                 cp = doc.add_paragraph()
