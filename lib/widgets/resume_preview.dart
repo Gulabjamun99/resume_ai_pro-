@@ -855,6 +855,10 @@ class _OriginalBlueprintLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (templateId == 'original' || templateId == 'cascade' || bp.hasSidebar) {
+      return _CascadeLayout(ctx: ctx);
+    }
+
     final primary = _parseColor(bp.primaryColorHex, ctx.accent);
     final secondary = _parseColor(bp.secondaryColorHex, ctx.accent.withValues(alpha: 0.8));
     final textColor = _parseColor(bp.textColorHex, const Color(0xFF2D3748));
