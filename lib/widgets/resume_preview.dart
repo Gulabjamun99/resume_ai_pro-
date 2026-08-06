@@ -855,7 +855,7 @@ class _OriginalBlueprintLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (bp.id == 'original' || bp.id == 'cascade' || bp.hasSidebar) {
+    if (bp.templateType == 'original' || bp.templateType == 'cascade' || bp.hasSidebar) {
       return _CascadeLayout(ctx: ctx);
     }
 
