@@ -1593,3 +1593,27 @@ def reset_version_repository():
     cursor.execute("DELETE FROM version_commits")
     conn.commit()
     conn.close()
+
+
+def ocr_image_with_vision(image_bytes: bytes) -> str:
+    """
+    Multimodal Vision OCR: Extracts full raw text from JPEG, PNG, or scanned image resumes using Gemini Vision.
+    """
+    try:
+        if PROVIDER == "gemini":
+            client = _get_gemini_client()
+            if client:
+                model_name = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+                prompt = "Extract ALL text from this resume image verbatim line by line without missing any contact info, headers, dates, skills, or bullet points."
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        {"mime_type": "image/png", "data": image_bytes},
+                        prompt
+                    ]
+                )
+                if response and hasattr(response, "text") and response.text:
+                    return response.text.strip()
+    except Exception as e:
+        print("Vision OCR error in ai_provider:", e)
+    return ""

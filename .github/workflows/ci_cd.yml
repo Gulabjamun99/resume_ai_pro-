@@ -36,11 +36,9 @@ jobs:
 
       - name: Run Backend Unit & Security Test Suite
         run: |
-          python scratch/run_backend_tests.py
-
-      - name: Run Real E2E Pipeline Verification Suite
-        run: |
-          python scratch/verify_real_e2e_pipeline.py
+          python backend/test_pipeline.py
+          python backend/test_telemetry_and_bugs.py
+          python backend/test_milestone2.py
 
   docker-build:
     name: Docker Container Build Check
