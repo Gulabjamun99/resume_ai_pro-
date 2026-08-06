@@ -708,6 +708,9 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "", file
     for l in exp_lines:
         if any(kw in l.lower() for kw in sec_keywords['experience']):
             continue
+
+        if any(sec_kw in l.lower() for sec_kw in ['education', 'mba from', 'bba from', 'certifications', 'it skills']):
+            break
         
         if '|' in l or re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2})\b', l, re.I):
             if curr_exp and (curr_exp['co'] or curr_exp['bullets']):
