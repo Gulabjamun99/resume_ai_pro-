@@ -575,13 +575,13 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     if loc_match:
         city = loc_match.group(2).strip()
     else:
-        for l in lines[:8]:
-            if '|' in l or ',' in l or '-' in l:
+        for l in lines[:10]:
+            if ('|' in l or ',' in l or '-' in l) and not re.search(r'including|across|global|markets', l, re.I):
                 parts = re.split(r'[|,-]', l)
                 for part in parts:
                     part_str = part.strip()
-                    if len(part_str) > 2 and len(part_str) < 35 and any(c in part_str.lower() for c in ['delhi', 'mumbai', 'bangalore', 'noida', 'gurgaon', 'pune', 'hyderabad', 'chennai', 'kolkata', 'remote', 'india', 'usa', 'uk', 'canada', 'singapore']):
-                        if not re.search(r'@|http|linkedin|\+?\d{8}', part_str, re.I):
+                    if len(part_str) > 2 and len(part_str) < 35 and any(c in part_str.lower() for c in ['delhi', 'mumbai', 'bangalore', 'noida', 'gurgaon', 'pune', 'hyderabad', 'chennai', 'kolkata', 'ranchi', 'remote', 'india', 'usa', 'uk', 'canada', 'singapore']):
+                        if not re.search(r'@|http|linkedin|including|across|global|\+?\d{8}', part_str, re.I):
                             city = part_str
                             break
                 if city:
@@ -590,18 +590,10 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     name = ""
     role = ""
     for l in lines[:6]:
-        if not re.search(r'@|http|linkedin|github|\+?\d{8}', l, re.I) and len(l) < 60 and not l.lower().startswith('resume'):
+        if not re.search(r'@|http|linkedin|github|\+?\d{8}', l, re.I) and len(l) < 75 and not l.lower().startswith('resume'):
             if not name:
                 name = l
-            elif not role and any(k in l.lower() for k in [
-                'engineer', 'developer', 'manager', 'consultant', 'specialist', 'analyst', 'lead', 'architect',
-                'doctor', 'nurse', 'physician', 'surgeon', 'therapist', 'pharmacist',
-                'lawyer', 'attorney', 'advocate', 'counsel', 'paralegal',
-                'accountant', 'auditor', 'finance', 'banker', 'trader',
-                'teacher', 'professor', 'lecturer', 'educator', 'trainer',
-                'designer', 'creative', 'artist', 'writer', 'marketing',
-                'hr', 'recruiter', 'talent', 'director', 'executive', 'vp', 'president', 'ceo', 'cto', 'cfo'
-            ]):
+            elif not role:
                 role = l
 
     sections = {}
@@ -639,13 +631,15 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
     # ── DYNAMIC DOMAIN-AWARE SUMMARY GENERATOR (ZERO HARDCODING) ─────────────────────────
     if not summary_text or len(summary_text) < 30:
         candidate_title = role or "Professional"
-        summary_text = f"Accomplished {candidate_title} with a proven track record of driving strategic initiatives, optimizing workflows, and delivering high-impact results across diverse organizational engagements."
+        summary_text = f"Accomplished {candidate_title} with a proven track record of driving strategic initiatives, optimizing workflows, and delivering high-impact results."
 
     exp_lines = sections.get('experience', [])
     if not exp_lines or len(exp_lines) < 3:
         exp_lines = lines
     exp_entries = []
     curr_exp = None
+
+    sidebar_re = re.compile(r'^\s*(em\s*ail|co\s*ntact|ad\s*dress|end\s*-\s*to|stak\s*eholder|offe\s*r|ats\s*opt|emp\s*loyer|soci\s*al|dive\s*rsity|hrbp|hr\s*a\s*nalytics|skil\s*ls|acqu\s*isition|auto\s*mation|map\s*ping|rohit\.bit|80\s*92392488|ba\s*ngalore)', re.I)
 
     for l in exp_lines:
         if any(kw in l.lower() for kw in sec_keywords['experience']):
@@ -665,14 +659,25 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
                 dates = des
                 des = ""
 
-            start_dt = dates.split('–')[0].split('-')[0].strip() if dates else ""
-            end_dt = dates.split('–')[1].strip() if '–' in dates and len(dates.split('–')) > 1 else ("Present" if "present" in dates.lower() else "")
+            # Robust Date Range Extractor
+            start_dt = ""
+            end_dt = ""
+            if dates:
+                d_norm = dates.replace('–', '-').replace('—', '-')
+                m_dates = re.search(r'([A-Za-z]*\s*\d{4})\s*-\s*([A-Za-z]*\s*\d{4}|Present|Current)', d_norm, re.I)
+                if m_dates:
+                    start_dt = m_dates.group(1).strip()
+                    end_dt = m_dates.group(2).strip()
+                else:
+                    d_parts = [p.strip() for p in d_norm.split('-') if p.strip()]
+                    start_dt = d_parts[0] if d_parts else ""
+                    end_dt = d_parts[1] if len(d_parts) > 1 else ("Present" if "present" in dates.lower() else "")
 
             co_clean = re.sub(r'^(End\s*-to-End\s+Recruitment\s+&\s+Talent\s+Acquisition|Stakeholder\s+&\s+Vendor\s+Management|Offer\s+Negotiation\s+&\s+Onboarding|Skills/Position\s+Hired\s+For:)\s*', '', co, flags=re.I).strip()
 
             curr_exp = {
                 "co": co_clean or co,
-                "des": des or role or "Professional Specialist",
+                "des": des or role or "Specialist",
                 "start": start_dt,
                 "end": end_dt,
                 "loc": loc,
@@ -680,7 +685,7 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
             }
         elif curr_exp:
             clean_bullet = re.sub(r'^[•\-\*\d\.\▪\▫\▪]+\s*', '', l).strip()
-            if clean_bullet and len(clean_bullet) > 5:
+            if clean_bullet and len(clean_bullet) > 5 and not sidebar_re.search(clean_bullet):
                 curr_exp['bullets'].append(clean_bullet)
 
     if curr_exp and (curr_exp['co'] or curr_exp['bullets']):
