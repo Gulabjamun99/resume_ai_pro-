@@ -45,7 +45,7 @@ async def security_and_rate_limit_middleware(request: Request, call_next):
     timestamps = _rate_limit_store.get(client_ip, [])
     timestamps = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
     
-    if client_ip != "testclient" and len(timestamps) >= RATE_LIMIT_MAX and not request.url.path.startswith("/health"):
+    if len(timestamps) >= RATE_LIMIT_MAX and not request.url.path.startswith("/health"):
         logger.warning(f"Rate limit exceeded for IP: {client_ip} on path {request.url.path}")
         return JSONResponse(
             status_code=429,
