@@ -642,6 +642,8 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
         summary_text = f"Accomplished {candidate_title} with a proven track record of driving strategic initiatives, optimizing workflows, and delivering high-impact results across diverse organizational engagements."
 
     exp_lines = sections.get('experience', [])
+    if not exp_lines or len(exp_lines) < 3:
+        exp_lines = lines
     exp_entries = []
     curr_exp = None
 
