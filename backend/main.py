@@ -969,6 +969,7 @@ async def chat_edit_resume(req: EditRequest):
     Applies incremental natural language edits to the candidate's existing resume.
     Supports Hinglish, Hindi, and English prompts.
     Translates raw notes into corporate ATS English bullet points.
+    Preserves 100% of historical companies, designations, and contacts.
     """
     try:
         current_data = req.current_data
@@ -1002,32 +1003,35 @@ USER INSTRUCTION:
 "{user_msg}"
 
 STRICT RULES:
-1. REWRITE RAW NOTES TO CORPORATE ATS ENGLISH: NEVER copy raw user notes or Hinglish phrases like "2025 ke april ke baad" verbatim into summary or experience bullets. Always translate and format them into professional corporate bullet points (e.g. "Provided independent consulting services to clients, leading recruitment operations and deploying live AI applications").
-2. UNDERSTAND INTENT & SCOPE: Apply changes ONLY to the section(s) requested by the user. If user asks "Summary short karo", modify ONLY "summary". Keep experience, education, projects, skills 100% UNTOUCHED.
-3. 100% DATA PRESERVATION: NEVER delete or drop any past job, company, degree, certification, or skill unless explicitly requested by the user.
-4. TRUTHFULNESS MANDATE: NEVER invent fake companies or fake experience. Rewrite existing user text professionally with strong action verbs.
+1. REWRITE RAW NOTES TO CORPORATE ATS ENGLISH: Translate raw user notes into professional corporate bullet points.
+2. PRESERVE ALL EXISTING COMPANIES & DESIGNATIONS: NEVER delete or drop any past job, company name, designation, degree, certification, or skill. If user asks to update 1 job, modify ONLY that job and keep all other companies and designations 100% untouched.
+3. TRUTHFULNESS MANDATE: Rewrite existing user text professionally with strong action verbs.
+4. DYNAMIC EXPLANATION MESSAGE: Generate a concise, friendly confirmation message explaining EXACTLY what changes were made in response to the user's prompt (e.g. "Updated designation for Infogain to Senior Talent Acquisition Executive").
 
 Return ONLY valid JSON matching this exact structure:
 {{
   "personal": {{"name":"","phone":"","email":"","city":"","linkedin":"","github":"","role":""}},
   "summary": "Professional summary in ATS English",
   "education": [{{"deg":"","col":"","yr":"","grade":"","honors":""}}],
-  "experience": [{{"co":"","des":"","start":"","end":"Present","loc":"","bullets":["Bullet point 1 in corporate English","Bullet point 2"]}}],
+  "experience": [{{"co":"","des":"","start":"","end":"Present","loc":"","bullets":["Bullet point 1"]}}],
   "skills": {{<USE THE SAME SKILL KEYS AS IN THE CURRENT RESUME>}},
   "projects": [{{"name":"","tech":"","desc":""}}],
   "extra": [""],
   "ats_keywords": [""],
   "ats_score": 92,
-  "estimated_pages": 1
+  "estimated_pages": 1,
+  "message": "Specific explanation of what changes were applied based on user instruction"
 }}
 """
         raw = ai_provider.generate_json(prompt, max_tokens=2200)
         parsed = ai_provider.repair_json(json.dumps(raw)) if isinstance(raw, str) else raw
 
-        dynamic_msg = "✨ Resume section updated in Corporate ATS English! Switch to 'Live Canvas' tab to preview."
+        dynamic_msg = ""
 
         # ── Validate AI response quality & Merge Personal Contact Details ────────────────
         if isinstance(parsed, dict) and parsed:
+            dynamic_msg = parsed.get("message", "").strip()
+
             # Intelligently merge personal contact details so phone/email/city updates are NEVER discarded
             curr_personal = dict(current_data.get("personal", {}))
             new_personal = dict(parsed.get("personal", {}))
@@ -1038,18 +1042,45 @@ Return ONLY valid JSON matching this exact structure:
 
             if "layout_blueprint" not in parsed and "layout_blueprint" in current_data:
                 parsed["layout_blueprint"] = current_data["layout_blueprint"]
-            if not parsed.get("experience") and current_data.get("experience"):
-                parsed["experience"] = current_data["experience"]
             if not parsed.get("education") and current_data.get("education"):
                 parsed["education"] = current_data["education"]
             if not parsed.get("skills") and current_data.get("skills"):
                 parsed["skills"] = current_data["skills"]
 
-            # Check if user instructed to update phone/email/address specifically and update dynamic_msg
-            if any(w in msg_lower for w in ["phone", "mobile", "number", "email", "address", "city", "location"]):
-                dynamic_msg = "📞 Contact info (Phone / Email / Address) updated live! Switch to 'Live Canvas' tab to preview."
+            # Smart Experience Merge (Guarantees zero dropped companies/designations)
+            curr_exp_list = list(current_data.get("experience", []))
+            new_exp_list = list(parsed.get("experience", []))
 
-            # If experience bullet points were updated, clean up any remaining raw Hinglish prompt artifacts
+            if new_exp_list:
+                if len(new_exp_list) < len(curr_exp_list):
+                    # AI returned only modified entries — merge into curr_exp_list
+                    for n_exp in new_exp_list:
+                        n_co = n_exp.get("co", "").lower().strip()
+                        matched = False
+                        for c_exp in curr_exp_list:
+                            c_co = c_exp.get("co", "").lower().strip()
+                            if n_co and (n_co in c_co or c_co in n_co):
+                                if n_exp.get("des"): c_exp["des"] = n_exp["des"]
+                                if n_exp.get("start"): c_exp["start"] = n_exp["start"]
+                                if n_exp.get("end"): c_exp["end"] = n_exp["end"]
+                                if n_exp.get("loc"): c_exp["loc"] = n_exp["loc"]
+                                if n_exp.get("bullets"): c_exp["bullets"] = n_exp["bullets"]
+                                matched = True
+                                break
+                        if not matched and n_exp.get("co"):
+                            curr_exp_list.insert(0, n_exp)
+                    parsed["experience"] = curr_exp_list
+                else:
+                    # AI returned full list — preserve any missing original designations
+                    for i, e in enumerate(new_exp_list):
+                        if not e.get("des") or e.get("des") == "Professional Specialist":
+                            if i < len(curr_exp_list):
+                                e["des"] = curr_exp_list[i].get("des", "Specialist")
+                    parsed["experience"] = new_exp_list
+            else:
+                parsed["experience"] = curr_exp_list
+
+            # Cleanup bullets
             if parsed.get("experience"):
                 for exp in parsed["experience"]:
                     if isinstance(exp, dict) and "bullets" in exp:
@@ -1060,6 +1091,9 @@ Return ONLY valid JSON matching this exact structure:
                             if b_clean:
                                 cleaned_bullets.append(b_clean)
                         exp["bullets"] = cleaned_bullets
+
+            if not dynamic_msg:
+                dynamic_msg = "✨ Live Assistant edit applied successfully! Check 'Live Canvas' to preview."
 
         else:
             # AI completely failed — apply a minimal smart fallback based on the user's message
@@ -1092,13 +1126,15 @@ Return ONLY valid JSON matching this exact structure:
                     parsed["summary"] = old_sum[:160].rsplit(" ", 1)[0] + "."
                 dynamic_msg = "✂️ Summary shortened to key professional highlights."
 
-            # Experience / New Job Role edits
-            if any(w in msg_lower for w in ["independent", "consult", "freelance", "job", "role", "work", "experience", "company", "2025", "position", "project"]):
-                top_entry = build_dynamic_top_experience(user_msg, current_data.get("personal", {}).get("role", ""))
-                exp_list = list(parsed.get("experience", []))
-                exp_list.insert(0, top_entry)
-                parsed["experience"] = exp_list
-                dynamic_msg = f"💼 Added new experience ({top_entry['des']} at {top_entry['co']}) in Corporate ATS English!"
+            # Experience / Designation edits in fallback
+            elif any(w in msg_lower for w in ["designation", "title", "role", "position"]):
+                des_match = re.search(r'(designation|title|role|position)\s*[:=]?\s*([^,\n\.]+)', user_msg, re.I)
+                if des_match:
+                    new_des = des_match.group(2).strip()
+                    parsed.setdefault("personal", {})["role"] = new_des
+                    if parsed.get("experience"):
+                        parsed["experience"][0]["des"] = new_des
+                    dynamic_msg = f"💼 Designation updated to '{new_des}'!"
 
             # Skills edits (only if user explicitly mentions 'skill' or 'technology')
             elif any(w in msg_lower for w in ["skill", "skills", "technology", "technologies", "tech stack"]):
