@@ -287,6 +287,36 @@ async def verify_payment(req: VerifyPaymentRequest):
             conn.close()
             raise HTTPException(status_code=500, detail=str(e))
 
+def extract_pdf_text_smart(content: bytes) -> str:
+    """
+    Intelligent PDF Text Extractor:
+    Detects 2-column sidebar PDFs (where left sidebar x < 135 contains skills/contacts,
+    and right panel x >= 135 contains main experience/education) and extracts them separately,
+    preventing sidebar text from concatenating into job titles or designations.
+    """
+    import pdfplumber
+    pages_text = []
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        for page in pdf.pages:
+            w = page.width
+            words = page.extract_words() or []
+            left_count = sum(1 for wd in words if wd['x1'] < 135)
+            right_count = sum(1 for wd in words if wd['x0'] >= 130)
+            
+            if left_count > 8 and right_count > 8:
+                right_crop = page.crop((130, 0, w, page.height))
+                left_crop = page.crop((0, 0, 135, page.height))
+                main_txt = right_crop.extract_text() or ""
+                side_txt = left_crop.extract_text() or ""
+                pages_text.append(main_txt.strip() + "\n\n" + side_txt.strip())
+            else:
+                t_norm = page.extract_text() or ""
+                t_lay = page.extract_text(layout=True) or ""
+                t = t_lay if len(t_lay.strip()) > len(t_norm.strip()) else t_norm
+                pages_text.append(t.strip())
+    return "\n".join([p for p in pages_text if p.strip()])
+
+
 # ── Upload Old CV → Extract Raw Text ─────────────────────
 @app.post("/upload-cv")
 async def upload_cv(file: UploadFile = File(...)):
@@ -307,31 +337,7 @@ async def upload_cv(file: UploadFile = File(...)):
 
     try:
         if filename.endswith(".pdf"):
-            import pdfplumber
-            with pdfplumber.open(io.BytesIO(content)) as pdf:
-                pages_text = []
-                for page in pdf.pages:
-                    t_normal = page.extract_text() or ""
-                    t_layout = page.extract_text(layout=True) or ""
-                    # Pick whichever extracted more characters/content
-                    t = t_layout if len(t_layout.strip()) > len(t_normal.strip()) else t_normal
-                    if t.strip():
-                        pages_text.append(t.strip())
-                    
-                    # Extract tables to capture side-by-side columnar details
-                    try:
-                        tables = page.extract_tables()
-                        for tbl in tables or []:
-                            for row in tbl or []:
-                                row_str = " | ".join([str(c).strip() for c in row if c and str(c).strip()])
-                                if row_str and row_str not in t:
-                                    pages_text.append(row_str)
-                    except Exception:
-                        pass
-
-                extracted_text = "\n".join(pages_text)
-
-            # Agar PDF scanned image hai (text nahi nikla), OCR try karo
+            extracted_text = extract_pdf_text_smart(content)
             if not extracted_text.strip():
                 extracted_text = _ocr_pdf(content)
 
@@ -697,23 +703,29 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "", file
 
     sidebar_re = re.compile(r'^\s*(em\s*ail|co\s*ntact|ad\s*dress|end\s*-\s*to|stak\s*eholder|offe\s*r|ats\s*opt|emp\s*loyer|soci\s*al|dive\s*rsity|hrbp|hr\s*a\s*nalytics|skil\s*ls|acqu\s*isition|auto\s*mation|map\s*ping|rohit\.bit|80\s*92392488|ba\s*ngalore)', re.I)
 
+    pending_designation = ""
+
     for l in exp_lines:
         if any(kw in l.lower() for kw in sec_keywords['experience']):
             continue
         
-        if '|' in l or ' – ' in l or ' - ' in l or re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2})\b', l, re.I):
+        if '|' in l or re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2})\b', l, re.I):
             if curr_exp and (curr_exp['co'] or curr_exp['bullets']):
                 exp_entries.append(curr_exp)
             
             parts = [p.strip() for p in re.split(r'[\|]', l)]
             co = parts[0] if len(parts) > 0 else ""
-            des = parts[1] if len(parts) > 1 else ""
-            dates = parts[2] if len(parts) > 2 else ""
-            loc = parts[3] if len(parts) > 3 else ""
+            
+            if len(parts) > 1 and re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2}|Present)\b', parts[1], re.I):
+                dates = parts[1]
+                loc = parts[2] if len(parts) > 2 else ""
+                des = pending_designation
+            else:
+                des = parts[1] if len(parts) > 1 else pending_designation
+                dates = parts[2] if len(parts) > 2 else ""
+                loc = parts[3] if len(parts) > 3 else ""
 
-            if not dates and ('–' in des or '-' in des or re.search(r'\b(19|20)\d{2}\b', des)):
-                dates = des
-                des = ""
+            pending_designation = ""
 
             # Robust Date Range Extractor
             start_dt = ""
@@ -739,6 +751,8 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "", file
                 "loc": loc,
                 "bullets": []
             }
+        elif not l.startswith('•') and len(l) < 70 and not sidebar_re.search(l):
+            pending_designation = l.strip()
         elif curr_exp:
             clean_bullet = re.sub(r'^[•\-\*\d\.\▪\▫\▪]+\s*', '', l).strip()
             if clean_bullet and len(clean_bullet) > 5 and not sidebar_re.search(clean_bullet):
