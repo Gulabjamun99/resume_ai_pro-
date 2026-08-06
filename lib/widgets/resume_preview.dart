@@ -1,6 +1,11 @@
 // lib/widgets/resume_preview.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/resume_model.dart';
+
+Widget _initialsWidget(String initials) {
+  return Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)));
+}
 
 /// Renders the final resume using real user data in the chosen template.
 /// Every template is domain-agnostic: skills sections render whatever keys
@@ -55,6 +60,7 @@ class ResumePreview extends StatelessWidget {
       role: (p['role'] ?? '').toString(),
       contacts: contacts,
       summary: data.summary,
+      photo: (p['photo'] ?? p['avatar'] ?? p['image'] ?? '').toString(),
       exp: exp,
       edus: edus,
       tech: tech,
@@ -208,7 +214,7 @@ List<_SkillGroup> _extractSkillGroups(Map<String, dynamic> sk) {
 
 /// Shared data bundle passed to every layout.
 class _ResumeContext {
-  final String name, role, summary;
+  final String name, role, summary, photo;
   final List<Map<String, String>> contacts;
   final List<String> tech, soft, langs, certs, extra;
   final List<dynamic> exp, edus, projs;
@@ -218,6 +224,7 @@ class _ResumeContext {
 
   _ResumeContext({
     required this.name, required this.role, required this.contacts, required this.summary,
+    required this.photo,
     required this.exp, required this.edus, required this.tech, required this.soft,
     required this.langs, required this.certs, required this.projs, required this.extra,
     required this.accent, required this.skillGroups,
@@ -465,9 +472,15 @@ class _CascadeLayout extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 44, height: 44,
+                  width: 52, height: 52,
                   decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                  child: Center(child: Text(ctx.initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
+                  child: ClipOval(
+                    child: ctx.photo.isNotEmpty
+                        ? (ctx.photo.startsWith('data:image')
+                            ? Image.memory(base64Decode(ctx.photo.split(',').last), fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initialsWidget(ctx.initials))
+                            : Image.network(ctx.photo, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initialsWidget(ctx.initials)))
+                        : _initialsWidget(ctx.initials),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(ctx.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2)),

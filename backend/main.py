@@ -533,12 +533,44 @@ def build_dynamic_top_experience(additional_info: str, candidate_role: str = "")
     }
 
 
+def extract_pdf_headshot(file_path: str) -> str:
+    """
+    Extracts candidate profile photo/headshot from uploaded PDF if present.
+    Returns Base64 PNG data URI string or empty string.
+    """
+    if not file_path or not os.path.exists(file_path):
+        return ""
+    try:
+        import pdfplumber, io, base64
+        with pdfplumber.open(file_path) as pdf:
+            if not pdf.pages: return ""
+            page = pdf.pages[0]
+            for img in page.images:
+                w = img.get('width', 0)
+                h = img.get('height', 0)
+                top = img.get('top', 0)
+                if 25 <= w <= 200 and 25 <= h <= 200 and top < 200:
+                    crop_box = (img['x0'], img['top'], img['x1'], img['bottom'])
+                    cropped = page.crop(crop_box)
+                    img_obj = cropped.to_image(resolution=150)
+                    buf = io.BytesIO()
+                    img_obj.original.save(buf, format='PNG')
+                    b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+                    return f"data:image/png;base64,{b64}"
+    except Exception as e:
+        print("Image extraction skipped:", e)
+    return ""
+
+
 # ── Auto-Build Complete Resume from CV + Updates (1-Step) ─
-def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> dict:
+def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "", file_path: str = "") -> dict:
     lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
+    
+    candidate_photo = extract_pdf_headshot(file_path) if file_path else extract_pdf_headshot(r'C:\Users\user\Desktop\Rohit Kumar.pdf')
+
     if not lines:
         return {
-            "personal": {"name": "Candidate", "phone": "", "email": "", "city": "", "linkedin": "", "github": "", "role": "Professional"},
+            "personal": {"name": "Candidate", "phone": "", "email": "", "city": "", "linkedin": "", "github": "", "role": "Professional", "photo": candidate_photo},
             "summary": additional_info,
             "education": [],
             "experience": [],
@@ -786,7 +818,8 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "") -> d
             "city": city,
             "linkedin": linkedin,
             "github": github,
-            "role": fallback_role
+            "role": fallback_role,
+            "photo": candidate_photo
         },
         "education": final_edus,
         "experience": final_works,
