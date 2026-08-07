@@ -1959,11 +1959,23 @@ async def download_pdf(req: DownloadRequest):
         except Exception:
             accent_color = colors.HexColor("#1a1a2e")
 
+        # Compute dynamic content density to auto-scale margins and font sizes for optimal A4 page fit
+        exp_list = rd.get("experience") or []
+        bullets_count = sum(len(w.get("bullets", [])) for w in exp_list if isinstance(w, dict))
+        summary_len = len(rd.get("summary", ""))
+
+        if bullets_count > 18 or summary_len > 600 or len(exp_list) >= 6:
+            body_pt, heading_pt, leading_pt, margin_mm = 8.5, 10.0, 11.5, 10
+        elif bullets_count > 10 or len(exp_list) >= 3:
+            body_pt, heading_pt, leading_pt, margin_mm = 9.5, 11.0, 12.5, 12
+        else:
+            body_pt, heading_pt, leading_pt, margin_mm = 10.5, 12.0, 13.5, 14
+
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer, pagesize=A4,
-            rightMargin=15*mm, leftMargin=15*mm,
-            topMargin=10*mm, bottomMargin=10*mm
+            rightMargin=margin_mm*mm, leftMargin=margin_mm*mm,
+            topMargin=margin_mm*mm, bottomMargin=margin_mm*mm
         )
 
         styles = getSampleStyleSheet()
@@ -1974,19 +1986,19 @@ async def download_pdf(req: DownloadRequest):
         role_style = ParagraphStyle('Role', fontSize=11, fontName='Helvetica',
                                      alignment=TA_CENTER, spaceAfter=3, textColor=accent_color)
         contact_style = ParagraphStyle('Contact', fontSize=9, fontName='Helvetica',
-                                        alignment=TA_CENTER, spaceAfter=8, textColor=colors.HexColor('#555'))
-        section_style = ParagraphStyle('Section', fontSize=9, fontName='Helvetica-Bold',
-                                        spaceBefore=6, spaceAfter=2, textColor=accent_color,
-                                        letterSpacing=1.5)
-        body_style = ParagraphStyle('Body', fontSize=9, fontName='Helvetica',
-                                     spaceAfter=2, textColor=colors.HexColor('#222'), leading=12)
-        bullet_style = ParagraphStyle('Bullet', fontSize=9, fontName='Helvetica',
+                                         alignment=TA_CENTER, spaceAfter=6, textColor=colors.HexColor('#555'))
+        section_style = ParagraphStyle('Section', fontSize=heading_pt, fontName='Helvetica-Bold',
+                                        spaceBefore=5, spaceAfter=2, textColor=accent_color,
+                                        letterSpacing=1.2)
+        body_style = ParagraphStyle('Body', fontSize=body_pt, fontName='Helvetica',
+                                     spaceAfter=2, textColor=colors.HexColor('#222'), leading=leading_pt)
+        bullet_style = ParagraphStyle('Bullet', fontSize=body_pt, fontName='Helvetica',
                                        spaceAfter=1, textColor=colors.HexColor('#222'),
-                                       leftIndent=12, leading=12)
-        bold_style = ParagraphStyle('Bold', fontSize=9, fontName='Helvetica-Bold',
-                                     spaceAfter=1, textColor=colors.HexColor('#111'))
-        italic_style = ParagraphStyle('Italic', fontSize=9, fontName='Helvetica-Oblique',
-                                       spaceAfter=2, textColor=colors.HexColor('#444'))
+                                       leftIndent=10, leading=leading_pt)
+        bold_style = ParagraphStyle('Bold', fontSize=body_pt, fontName='Helvetica-Bold',
+                                     spaceAfter=1, textColor=colors.HexColor('#111'), leading=leading_pt)
+        italic_style = ParagraphStyle('Italic', fontSize=body_pt, fontName='Helvetica-Oblique',
+                                       spaceAfter=2, textColor=colors.HexColor('#444'), leading=leading_pt)
 
         def section_hr():
             return HRFlowable(width="100%", thickness=1, color=accent_color, spaceAfter=4)
