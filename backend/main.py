@@ -999,7 +999,7 @@ INSTRUCTIONS:
    - Education/Teaching/Training → skills keys: "teaching_skills", "soft", "specializations", "certifications"
    - Engineering (Civil/Mechanical/Electrical) → skills keys: "engineering_skills", "soft", "tools", "certifications"
    - Other → skills keys: "core_competencies", "soft", "tools", "certifications"
-7. Target a 1-page to max 2-page ATS structure.
+7. A4 PAGE BUDGET MANDATE: Target EXACTLY 1 Page A4 size for standard candidate profiles (up to 10 years exp / 1-5 roles), and MAX 2 Pages A4 for highly senior executive profiles (15+ years exp / 7+ roles). Ensure text size, bullet density, and summary formatting allow everything to fit cleanly on A4 paper without dropping any detail or creating overflow pages.
 
 CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Use this exact outer structure but adapt the "skills" object keys based on the detected domain:
 {{
@@ -2187,10 +2187,12 @@ async def download_doc(req: DownloadRequest):
         doc = Document()
 
         for section in doc.sections:
-            section.top_margin = Cm(1.5)
-            section.bottom_margin = Cm(1.5)
-            section.left_margin = Cm(2)
-            section.right_margin = Cm(2)
+            section.page_width = Inches(8.27)
+            section.page_height = Inches(11.69)
+            section.top_margin = Cm(1.2)
+            section.bottom_margin = Cm(1.2)
+            section.left_margin = Cm(1.5)
+            section.right_margin = Cm(1.5)
 
         def add_hr(doc):
             para = doc.add_paragraph()
