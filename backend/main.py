@@ -173,6 +173,78 @@ class ResumeRequest(BaseModel):
     works: List[WorkEntry] = []
     skills: Skills = Skills()
     projs: List[ProjectEntry] = []
+
+
+def calculate_dynamic_ats_score(data: dict) -> int:
+    """
+    Calculates dynamic ATS compatibility score (50-98%) based on candidate's real data quality.
+    Evaluates: Contact Completeness, Summary Depth, Bullet Metrics, Action Verbs, Education, Skills Density.
+    """
+    if not isinstance(data, dict): return 85
+    score = 0
+    p = data.get('personal', {})
+    if not isinstance(p, dict): p = {}
+    
+    # 1. Contact Info (Max 20 pts)
+    if p.get('name'): score += 5
+    if p.get('email'): score += 5
+    if p.get('phone'): score += 5
+    if p.get('city') or p.get('location'): score += 3
+    if p.get('linkedin'): score += 2
+
+    # 2. Professional Summary (Max 15 pts)
+    summ = str(data.get('summary', '')).strip()
+    w_count = len(summ.split())
+    if w_count >= 30: score += 15
+    elif w_count >= 15: score += 10
+    elif w_count > 0: score += 5
+
+    # 3. Work Experience & Bullet Metrics (Max 35 pts)
+    exp = data.get('experience') or data.get('works') or []
+    if isinstance(exp, list):
+        if len(exp) >= 3: score += 15
+        elif len(exp) == 2: score += 10
+        elif len(exp) == 1: score += 5
+
+        all_bullets = []
+        for w in exp:
+            if isinstance(w, dict):
+                pts = w.get('bullets') or w.get('pts') or []
+                if isinstance(pts, list): all_bullets.extend([str(b) for b in pts])
+                elif isinstance(pts, str): all_bullets.extend(pts.split('\n'))
+
+        bullets_text = ' '.join(all_bullets)
+        if re.search(r'\d+%\b|\$\d+|\b\d+\s*(roles|team|candidates|projects|years|clients)', bullets_text, re.I):
+            score += 10
+        elif len(all_bullets) > 0:
+            score += 5
+
+        if re.search(r'\b(Led|Architected|Delivered|Reduced|Increased|Optimized|Implemented|Built|Spearheaded|Managed|Automated)\b', bullets_text, re.I):
+            score += 10
+        elif len(all_bullets) > 0:
+            score += 5
+
+    # 4. Education & Certifications (Max 15 pts)
+    edus = data.get('education') or data.get('edus') or []
+    if isinstance(edus, list) and len(edus) >= 1: score += 10
+
+    sk = data.get('skills', {})
+    certs = []
+    if isinstance(sk, dict): certs = sk.get('certifications') or sk.get('cert') or []
+    if certs: score += 5
+
+    # 5. Skills Density (Max 15 pts)
+    all_skills = []
+    if isinstance(sk, dict):
+        for v in sk.values():
+            if isinstance(v, list): all_skills.extend([str(s) for s in v])
+            elif isinstance(v, str): all_skills.extend(v.split(','))
+    
+    if len(all_skills) >= 8: score += 15
+    elif len(all_skills) >= 5: score += 10
+    elif len(all_skills) > 0: score += 5
+
+    return min(98, max(52, score))
     extra: str = ""
     template_id: str = "classic"
     template_color: str = "#1a1a2e"
@@ -866,7 +938,13 @@ def extract_raw_cv_fallback(extracted_text: str, additional_info: str = "", file
         "projects": proj_entries,
         "extra": [l for l in sections.get('extra', []) if len(l) > 5],
         "ats_keywords": tech_skills[:8] if tech_skills else ["Management", "Leadership"],
-        "ats_score": 92,
+        "ats_score": calculate_dynamic_ats_score({
+            "personal": {"name": fallback_name, "phone": phone, "email": email, "city": city, "linkedin": linkedin, "github": github, "role": fallback_role},
+            "summary": fallback_summary,
+            "education": final_edus,
+            "experience": final_works,
+            "skills": {"core_competencies": tech_skills}
+        }),
         "estimated_pages": 1
     }
 
@@ -972,6 +1050,7 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Use this exact ou
         parsed["intelligence_graph"] = intelligence_graph
         parsed["guardian_result"] = guardian_result
         parsed["cognitive_plan"] = cognitive_plan
+        parsed["ats_score"] = calculate_dynamic_ats_score(parsed)
 
         return JSONResponse(content={
             "success": True,
@@ -1052,7 +1131,7 @@ async def chat_edit_resume(req: EditRequest):
             })
         
         if any(w in msg_lower for w in ["ats", "verify", "score", "check", "check kre"]):
-            score = current_data.get("ats_score", 92)
+            score = calculate_dynamic_ats_score(current_data)
             return JSONResponse(content={
                 "success": True,
                 "data": current_data,
@@ -1236,6 +1315,7 @@ Return ONLY valid JSON matching this exact structure:
                 "guardian_blocked": True
             })
 
+        parsed["ats_score"] = calculate_dynamic_ats_score(parsed)
         health_scores = ai_provider.generate_health_scores(parsed)
 
         return JSONResponse(content={

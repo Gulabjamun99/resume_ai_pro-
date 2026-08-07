@@ -203,7 +203,7 @@ class ApiService {
         'current_data': current.toJson(),
         'user_message': userMessage,
       }),
-    ).timeout(const Duration(seconds: 35));
+    ).timeout(const Duration(seconds: 75));
 
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body);
