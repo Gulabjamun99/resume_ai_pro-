@@ -955,7 +955,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         children: [
           const Text('Tailor Resume to Target Job (JD Match)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 4),
-          const Text('Paste the job description from LinkedIn, Naukri, or Company Portal to get instant match score and 1-click alignment.', style: TextStyle(color: Colors.white60, fontSize: 11.5)),
+          const Text('Paste full Job Description text OR Job Posting Web URL Link (LinkedIn, Naukri, Indeed, Portal) for instant match score & deep gap analysis.', style: TextStyle(color: Colors.white60, fontSize: 11.5)),
           const SizedBox(height: 14),
 
           TextField(
@@ -963,7 +963,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             maxLines: 5,
             style: const TextStyle(color: Colors.white, fontSize: 12),
             decoration: InputDecoration(
-              hintText: 'Paste Job Description text here...',
+              hintText: 'Paste Job Description text OR Web URL (https://...)...',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
               filled: true,
               fillColor: const Color(0xFF161922),
@@ -979,7 +979,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
               icon: _isMatchingJD
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.compare_arrows, color: Colors.white, size: 18),
-              label: const Text('Calculate Match Score & Analyze', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              label: const Text('Calculate Match Score & Detailed Gap Analysis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1034,6 +1034,21 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                       child: Text(k.toString(), style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                     )).toList(),
                   ),
+                  if (_jdMatchResult!['detailed_analysis'] != null) ...[
+                    const SizedBox(height: 14),
+                    const Divider(color: Colors.white12),
+                    const SizedBox(height: 8),
+                    const Text('📊 Detailed Gap Analysis:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    if (_jdMatchResult!['detailed_analysis']['strengths'] != null)
+                      Text('✅ Strengths: ${_jdMatchResult!['detailed_analysis']['strengths']}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 11.5, height: 1.3)),
+                    const SizedBox(height: 4),
+                    if (_jdMatchResult!['detailed_analysis']['gaps'] != null)
+                      Text('⚠️ Key Gaps: ${_jdMatchResult!['detailed_analysis']['gaps']}', style: const TextStyle(color: Colors.amber, fontSize: 11.5, height: 1.3)),
+                    const SizedBox(height: 4),
+                    if (_jdMatchResult!['detailed_analysis']['recommendations'] != null)
+                      Text('💡 Recommendation: ${_jdMatchResult!['detailed_analysis']['recommendations']}', style: const TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.3)),
+                  ],
                 ],
               ),
             ),

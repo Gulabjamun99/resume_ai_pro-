@@ -177,34 +177,39 @@ class ResumeRequest(BaseModel):
 
 def calculate_dynamic_ats_score(data: dict) -> int:
     """
-    Calculates dynamic ATS compatibility score (50-98%) based on candidate's real data quality.
-    Evaluates: Contact Completeness, Summary Depth, Bullet Metrics, Action Verbs, Education, Skills Density.
+    Intelligently computes candidate's ATS Compatibility Score (55-98%) across diverse candidate profiles.
+    Evaluates:
+    - Contact Info & Professional Profiles (LinkedIn, GitHub, Portfolio)
+    - Summary Phrasing & Executive Depth (Flexible, never penalize long summaries)
+    - Work Experience Impact, Action Verbs, and Quantifiable Metrics
+    - Education, Degrees, Certifications, Honors, Licenses
+    - Dynamic Skills Density across domain-specific categories
+    - Projects, Publications, Patents, Achievements, & Open Source
     """
-    if not isinstance(data, dict): return 85
-    score = 0
+    if not isinstance(data, dict): return 80
+    score = 45
+
     p = data.get('personal', {})
     if not isinstance(p, dict): p = {}
-    
-    # 1. Contact Info (Max 20 pts)
+
+    # 1. Contact & Digital Identity (Max +20 pts)
     if p.get('name'): score += 5
     if p.get('email'): score += 5
-    if p.get('phone'): score += 5
+    if p.get('phone'): score += 4
     if p.get('city') or p.get('location'): score += 3
-    if p.get('linkedin'): score += 2
+    if p.get('linkedin') or p.get('github') or p.get('portfolio'): score += 3
 
-    # 2. Professional Summary (Max 15 pts)
+    # 2. Professional Summary Depth & Richness (Max +15 pts) - Flexible, never penalize long summaries!
     summ = str(data.get('summary', '')).strip()
     w_count = len(summ.split())
-    if w_count >= 30: score += 15
-    elif w_count >= 15: score += 10
+    if w_count >= 20: score += 15
+    elif w_count >= 10: score += 10
     elif w_count > 0: score += 5
 
-    # 3. Work Experience & Bullet Metrics (Max 35 pts)
+    # 3. Experience Impact & Quantitative Metrics (Max +30 pts)
     exp = data.get('experience') or data.get('works') or []
-    if isinstance(exp, list):
-        if len(exp) >= 3: score += 15
-        elif len(exp) == 2: score += 10
-        elif len(exp) == 1: score += 5
+    if isinstance(exp, list) and len(exp) > 0:
+        score += min(15, len(exp) * 5)
 
         all_bullets = []
         for w in exp:
@@ -214,17 +219,18 @@ def calculate_dynamic_ats_score(data: dict) -> int:
                 elif isinstance(pts, str): all_bullets.extend(pts.split('\n'))
 
         bullets_text = ' '.join(all_bullets)
-        if re.search(r'\d+%\b|\$\d+|\b\d+\s*(roles|team|candidates|projects|years|clients)', bullets_text, re.I):
-            score += 10
-        elif len(all_bullets) > 0:
-            score += 5
 
-        if re.search(r'\b(Led|Architected|Delivered|Reduced|Increased|Optimized|Implemented|Built|Spearheaded|Managed|Automated)\b', bullets_text, re.I):
-            score += 10
+        if re.search(r'\d+%\b|\$\d+|\b\d+\s*(roles|team|candidates|projects|years|clients|revenue|users|growth)', bullets_text, re.I):
+            score += 8
         elif len(all_bullets) > 0:
-            score += 5
+            score += 4
 
-    # 4. Education & Certifications (Max 15 pts)
+        if re.search(r'\b(Led|Architected|Delivered|Reduced|Increased|Optimized|Implemented|Built|Spearheaded|Managed|Automated|Designed|Directed)\b', bullets_text, re.I):
+            score += 7
+        elif len(all_bullets) > 0:
+            score += 3
+
+    # 4. Education & Credentials (Max +15 pts)
     edus = data.get('education') or data.get('edus') or []
     if isinstance(edus, list) and len(edus) >= 1: score += 10
 
@@ -233,18 +239,22 @@ def calculate_dynamic_ats_score(data: dict) -> int:
     if isinstance(sk, dict): certs = sk.get('certifications') or sk.get('cert') or []
     if certs: score += 5
 
-    # 5. Skills Density (Max 15 pts)
+    # 5. Dynamic Skills, Projects, Publications, Achievements (Max +20 pts)
     all_skills = []
     if isinstance(sk, dict):
         for v in sk.values():
             if isinstance(v, list): all_skills.extend([str(s) for s in v])
             elif isinstance(v, str): all_skills.extend(v.split(','))
-    
-    if len(all_skills) >= 8: score += 15
-    elif len(all_skills) >= 5: score += 10
+
+    if len(all_skills) >= 6: score += 10
     elif len(all_skills) > 0: score += 5
 
-    return min(98, max(52, score))
+    projs = data.get('projects') or data.get('projs') or []
+    extra = data.get('extra') or []
+    if (isinstance(projs, list) and len(projs) > 0) or (isinstance(extra, list) and len(extra) > 0):
+        score += 10
+
+    return min(98, max(55, score))
     extra: str = ""
     template_id: str = "classic"
     template_color: str = "#1a1a2e"
@@ -1486,41 +1496,75 @@ Return ONLY valid JSON array under key "suggestions":
         return JSONResponse(content={"success": False, "suggestions": []})
 
 
+def extract_text_from_url(url_or_text: str) -> str:
+    """
+    Extracts raw text content if candidate inputs a Web URL link (e.g. LinkedIn / Naukri / Indeed / Company Careers page).
+    """
+    text = str(url_or_text).strip()
+    if not text.startswith("http://") and not text.startswith("https://"):
+        return text
+    
+    try:
+        import urllib.request
+        from bs4 import BeautifulSoup
+        req = urllib.request.Request(
+            text, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        )
+        html = urllib.request.urlopen(req, timeout=10).read().decode('utf-8', errors='ignore')
+        soup = BeautifulSoup(html, 'html.parser')
+        for script in soup(["script", "style", "nav", "footer", "header"]):
+            script.extract()
+        page_text = soup.get_text(separator=' ')
+        lines = (line.strip() for line in page_text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        clean_text = ' '.join(chunk for chunk in chunks if chunk)
+        return clean_text[:4000] if len(clean_text) > 100 else text
+    except Exception as e:
+        print("URL extraction fallback:", e)
+        return text
+
+
 # ── JD Matcher & Optimizer Endpoint ──────────────────────
 @app.post("/jd-match")
 async def jd_match(req: dict):
     """
-    Compares candidate's resume with a pasted Job Description.
-    Generates JD Match Score (0-100%), matching/missing keywords, and 1-click optimized resume data.
+    Compares candidate's resume with a pasted Job Description or Web URL link.
+    Generates JD Match Score (0-100%), matching/missing keywords, detailed gap analysis, and 1-click optimized resume data.
     """
     try:
-        jd_text = req.get("job_description", "")
+        raw_input = req.get("job_description", "")
+        jd_text = extract_text_from_url(raw_input)
         resume_data = req.get("resume_data", {})
         
         # ── STEP 1: Get match score, keywords, tips (small focused call) ────────
         prompt_step1 = f"""You are a Senior ATS Recruiter Engine.
-Compare this resume to the job description and return ONLY analysis (no resume data).
+Compare this candidate's resume to the job description (raw text or extracted from URL) and return a detailed gap analysis.
 
-JOB DESCRIPTION:
-{jd_text[:2000]}
+TARGET JOB DESCRIPTION:
+{jd_text[:3000]}
 
-CANDIDATE SKILLS & SUMMARY:
+CANDIDATE PROFILE:
 Name: {resume_data.get('personal', {}).get('name', 'Candidate')}
 Role: {resume_data.get('personal', {}).get('role', 'Professional')}
-Summary: {resume_data.get('summary', '')[:400]}
-Skills: {json.dumps(list(resume_data.get('skills', {}).values())[:4], ensure_ascii=False)[:500]}
-Experience titles: {[e.get('des','') + ' at ' + e.get('co','') for e in (resume_data.get('experience') or [])[:3]]}
+Summary: {resume_data.get('summary', '')[:500]}
+Skills: {json.dumps(list(resume_data.get('skills', {}).values())[:6], ensure_ascii=False)[:600]}
+Experience titles: {[e.get('des','') + ' at ' + e.get('co','') for e in (resume_data.get('experience') or [])[:4]]}
 
-Return ONLY this JSON (no optimized_data needed here):
+Return ONLY this JSON:
 {{
-  "match_score": 72,
+  "match_score": 78,
   "matching_keywords": ["Python", "Docker", "AWS"],
-  "missing_keywords": ["Kubernetes", "GraphQL", "CI/CD", "PostgreSQL"],
+  "missing_keywords": ["Kubernetes", "GraphQL", "CI/CD"],
   "action_tips": [
-    "Add Kubernetes to your DevOps experience bullets",
-    "Mention GraphQL or REST API design patterns in skills",
-    "Include CI/CD pipeline tools like Jenkins or GitHub Actions"
-  ]
+    "Add Kubernetes to your experience bullets",
+    "Include CI/CD pipeline automation tools"
+  ],
+  "detailed_analysis": {{
+    "strengths": "Strong alignment in core domain experience and primary tool stack.",
+    "gaps": "Target JD requires specific experience with container orchestration and automated testing.",
+    "recommendations": "Click 'Optimize for JD' to reframe your bullets and reorder skills matching this specific JD while preserving 100% of your real background."
+  }}
 }}"""
         raw1 = ai_provider.generate_json(prompt_step1, max_tokens=800)
         res = ai_provider.repair_json(json.dumps(raw1)) if isinstance(raw1, str) else raw1
@@ -1730,6 +1774,7 @@ async def generate_jd_tailored_resume(req: JDTailorRequest):
     and page-length rules as normal generation, plus JD-keyword matching.
     """
     level = "Senior" if req.exp >= 4 else "Junior"
+    jd_clean_text = extract_text_from_url(req.job_description)
 
     works_text = ""
     for i, w in enumerate(req.works):
