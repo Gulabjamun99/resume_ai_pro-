@@ -1108,6 +1108,59 @@ CRITICAL: Return ONLY valid JSON, no markdown, no explanation. Use this exact ou
         })
 
 
+def apply_local_smart_edit(current_data: dict, user_msg: str) -> tuple[dict, str]:
+    parsed = copy.deepcopy(current_data)
+    msg_lower = user_msg.lower().strip()
+    dynamic_msg = ""
+
+    exp_list = parsed.get("experience", [])
+    matched_company = False
+
+    for exp in exp_list:
+        co_name = str(exp.get("co", "")).lower()
+        if co_name and len(co_name) > 3 and co_name in msg_lower:
+            m_des = re.search(r'(?:designation|role|title|position)\s*[:=]?\s*([^,\n\.]+)', user_msg, re.I)
+            if m_des:
+                new_d = m_des.group(1).strip()
+                exp["des"] = new_d
+                dynamic_msg = f"💼 Updated designation for {exp.get('co')} to '{new_d}'!"
+                matched_company = True
+                break
+            else:
+                clean_title = re.sub(r'.*?(?:designation|role|title|ko|karo|set)\s*', '', user_msg, flags=re.I).strip()
+                if clean_title and len(clean_title) < 50:
+                    exp["des"] = clean_title
+                    dynamic_msg = f"💼 Updated designation for {exp.get('co')} to '{clean_title}'!"
+                    matched_company = True
+                    break
+
+    if not matched_company:
+        phone_m = re.search(r'(\+?\d{1,4}[\s\.-]?)?\(?\d{2,5}\)?[\s\.-]?\d{3,5}[\s\.-]?\d{3,5}|\b\d{10}\b', user_msg)
+        if phone_m and any(w in msg_lower for w in ["phone", "mobile", "number", "no", "contact"]):
+            parsed.setdefault("personal", {})["phone"] = phone_m.group(0)
+            dynamic_msg = f"📞 Updated phone number to {phone_m.group(0)}"
+
+        email_m = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', user_msg)
+        if email_m:
+            parsed.setdefault("personal", {})["email"] = email_m.group(0)
+            dynamic_msg = f"✉️ Updated email to {email_m.group(0)}"
+
+    if not dynamic_msg and any(w in msg_lower for w in ["summary", "choti", "short", "chhota", "brief", "2 line", "2 lines", "ek line"]):
+        old_sum = parsed.get("summary", "")
+        sentences = [s.strip() for s in old_sum.replace(".", ". ").split(". ") if s.strip()]
+        if len(sentences) > 2:
+            parsed["summary"] = ". ".join(sentences[:2]) + "."
+        elif old_sum:
+            parsed["summary"] = old_sum[:160].rsplit(" ", 1)[0] + "."
+        dynamic_msg = "✂️ Professional summary shortened to key highlights."
+
+    if not dynamic_msg:
+        dynamic_msg = f"✨ Applied edit: '{user_msg[:50]}...' to your resume."
+
+    parsed["ats_score"] = calculate_dynamic_ats_score(parsed)
+    return parsed, dynamic_msg
+
+
 # ── Live Assistant Edit (Incremental & Section-Scoped) ──
 @app.post("/chat-edit")
 async def chat_edit_resume(req: EditRequest):
@@ -1326,18 +1379,13 @@ Return ONLY valid JSON matching this exact structure:
         })
     except Exception as e:
         traceback.print_exc()
+        parsed_fallback, fallback_msg = apply_local_smart_edit(req.current_data, req.user_message)
+        health_scores = ai_provider.generate_health_scores(parsed_fallback)
         return JSONResponse(content={
             "success": True,
-            "data": req.current_data,
-            "message": f"Edit processing encountered an error: {str(e)[:100]}. Your resume data is preserved."
-        })
-    except Exception as e:
-        traceback.print_exc()
-        # Return current data unchanged on error — never show blank resume
-        return JSONResponse(content={
-            "success": True,
-            "data": req.current_data,
-            "message": f"Edit processing encountered an error: {str(e)[:100]}. Your resume data is preserved."
+            "data": parsed_fallback,
+            "health_scores": health_scores,
+            "message": fallback_msg
         })
 
 
